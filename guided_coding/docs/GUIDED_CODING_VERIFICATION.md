@@ -62,18 +62,18 @@ Before extracting an archive, compare it with the SHA-256 checksum supplied inde
 Replace the path below with the canonical source root—the absolute path after resolving symbolic links—and paste this complete block as one command. It works in bash, zsh, csh and tcsh; each line ends with `\`, which continues it on the next line:
 
 ```bash
-cd /absolute/path/to/libtbx/guided_coding && \
+cd /absolute/path/to/modules/guided_coding/guided_coding && \
 shasum -a 256 -c SOURCE_MANIFEST.sha256 && \
 env GC_PAYLOAD_ROOT="`pwd -P`/payload" libtbx.python -I -B payload/tools/screen_check.py verify-source . && \
 cat payload/RELEASE && \
-grep -Eq '^guided_coding 2\.0 pilot r10 rev20 ' payload/RELEASE
+grep -Eq '^guided_coding 2\.0 pilot r10 rev21 ' payload/RELEASE
 ```
 
 Where `shasum` is missing (some Linux systems), replace `shasum -a 256 -c SOURCE_MANIFEST.sha256` with `sha256sum -c SOURCE_MANIFEST.sha256`; it reads the same manifest file.
 
 Each `&&` makes the next command depend on the previous command succeeding. A failed directory change or checksum must stop the block before the kit's checker runs. A failed inventory check must stop the remaining commands. Do not append unguarded preparation or registration commands.
 
-After the block succeeds, separately compare the manifest's own SHA-256 and the full release label with the expected handoff. The final `grep` checks that the release line begins with the `r10 rev20` label (a later release that names rev20 only in its history is refused); it does not identify an exact revision or establish approval.
+After the block succeeds, separately compare the manifest's own SHA-256 and the full release label with the expected handoff. The final `grep` checks that the release line begins with the `r10 rev21` label (a later release that names rev21 only in its history is refused); it does not identify an exact revision or establish approval.
 
 Repeat the complete source check before running central tools and before consequential work, as required by `SKILL.md`. If the source changes, stop dependent work until the difference has been resolved.
 
@@ -400,10 +400,10 @@ These paths identify historical records. They are not additional files included 
 
 ### Repository test wrapper
 
-The source repository has a wrapper, [`libtbx/tst_guided_coding.py`](../../tst_guided_coding.py), which is outside this kit. From a suitable cctbx environment it can be run separately:
+The source repository has a wrapper, [`tst_guided_coding.py`](../../tst_guided_coding.py), which is outside this kit. From a suitable cctbx environment it can be run separately:
 
 ```bash
-libtbx.python /absolute/path/to/cctbx_project/libtbx/tst_guided_coding.py
+libtbx.python /absolute/path/to/modules/guided_coding/tst_guided_coding.py
 ```
 
 It copies manifest-listed files into scratch, resolves the temporary directory, runs the package tests and checks that listed installed files did not change. When libtbx precompilation is available, it checks that branch on another copy.

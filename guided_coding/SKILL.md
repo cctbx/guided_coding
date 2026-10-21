@@ -37,11 +37,11 @@ In a cctbx or Phenix build, `libtbx.python` is the build's conda Python, which h
 When `libtbx.python` is not on PATH, use that build's `conda_base/bin/python3` by its absolute path.
 
 ```bash
-cd /absolute/path/to/libtbx/guided_coding &&
+cd /absolute/path/to/modules/guided_coding/guided_coding &&
 if command -v shasum >/dev/null 2>&1; then shasum -a 256 -c SOURCE_MANIFEST.sha256; else sha256sum -c SOURCE_MANIFEST.sha256; fi &&
 GC_PAYLOAD_ROOT="$(pwd -P)/payload" libtbx.python -I -B payload/tools/screen_check.py verify-source . &&
 cat payload/RELEASE &&
-grep -Eq '^guided_coding 2\.0 pilot r10 rev20 ' payload/RELEASE
+grep -Eq '^guided_coding 2\.0 pilot r10 rev21 ' payload/RELEASE
 ```
 After changing directory, the listed-hash check must succeed before any
 checker code runs. It uses `shasum` when that command exists and otherwise
@@ -53,7 +53,7 @@ unlisted module in `payload/tools/` from loading during verification.
 A directory, checksum, inventory or release failure returns nonzero and
 stops all dependent work. Only after this block succeeds, read
 `payload/DEVELOPER_GUIDE_CONTRACT.md`.
-This revision requires the release line to begin `guided_coding 2.0 pilot r10 rev20 `
+This revision requires the release line to begin `guided_coding 2.0 pilot r10 rev21 `
 (the label, not a mention of it later in the line); if it does not,
 stop and report the different version before starting a guided change.
 

@@ -333,7 +333,7 @@ reports.
 
 ## Running the kit's own tests
 
-The kit's own suite (`tests/tst_*_v20.py`, and `libtbx/tst_guided_coding.py`) runs with Python
+The kit's own suite (`tests/tst_*_v20.py`, and the repository's `tst_guided_coding.py`) runs with Python
 3.10 or newer that has psutil: `libtbx.python -B -m unittest discover -s tests -p 'tst_*.py' -v` from the
 kit root, TMPDIR set to a resolved path. It needs a readable process table, which it reads
 through psutil (revision 16): that works inside `sandbox-exec` too, where the setuid `/bin/ps`
@@ -354,7 +354,7 @@ to make it run.
 
 ## Tests off macOS
 
-The kit's tests (`tests/tst_*_v20.py`, and `libtbx/tst_guided_coding.py` in the shared suite) are
+The kit's tests (`tests/tst_*_v20.py`, and the repository's `tst_guided_coding.py`) are
 meant to run on Linux. There, and on a Mac when `GC_TEST_SIMULATE_NON_MACOS=1` simulates it
 inside the test processes, the tests run the helper through the test-only launcher `tests/auto_queue_standin.py`:
 it imports `auto_queue.py` and, in its own process only, accepts the platform and replaces

@@ -5,7 +5,7 @@ Use this reference for exact registration commands, control requests and source 
 ## Register once, then choose a project
 
 Keep the procedure in one reviewed, stable directory, normally
-`cctbx_project/libtbx/guided_coding/`. Register that source once per local
+`modules/guided_coding/guided_coding/`. Register that source once per local
 Claude Code configuration. You do not install another procedure copy in
 every repository.
 
@@ -13,7 +13,7 @@ In ordinary Claude Code, you can request registration with this message,
 replacing the example with your actual absolute path:
 
 ```text
-Please set up GuidedCoding from /absolute/path/to/cctbx_project/libtbx/guided_coding for this machine. Read docs/GUIDED_CODING_COMMAND_REFERENCE.md there. Verify the source and release, check the Claude Code minimum version, inspect any existing personal skill, and register the central link only if the checks pass and the destination is unoccupied. Show what changed, then offer /guided_coding setup for the project I choose, recovering saved settings first. Do not connect to servers, change permission settings, or start a coding task.
+Please set up GuidedCoding from /absolute/path/to/modules/guided_coding/guided_coding for this machine. Read docs/GUIDED_CODING_COMMAND_REFERENCE.md there. Verify the source and release, check the Claude Code minimum version, inspect any existing personal skill, and register the central link only if the checks pass and the destination is unoccupied. Show what changed, then offer /guided_coding setup for the project I choose, recovering saved settings first. Do not connect to servers, change permission settings, or start a coding task.
 ```
 
 This message asks Claude to perform the setup steps. It needs the source
@@ -41,7 +41,11 @@ Compare the archive's SHA-256 with the independently supplied review or
 publication record using a trusted checksum tool. The archive and its own
 manifest cannot establish their origin by themselves. Inspect its member
 names before extraction; the expected source archive contains
-`libtbx/guided_coding/`, without an enclosing release-named folder.
+`guided_coding/`, without an enclosing release-named folder.
+Historical: an archive of revision 20 or earlier, such as an earlier review
+bundle, contains `libtbx/guided_coding/`; for it, use
+`/path/to/empty-gc-review/libtbx/guided_coding` in the `cd` line below and
+the release label from its own handoff.
 
 Use an empty staging directory. Replace the paths and paste this **whole
 block** as one command, not separate commands (each line ends with `\`,
@@ -50,11 +54,11 @@ which continues it on the next line):
 ```bash
 mkdir /path/to/empty-gc-review && \
 tar -xzf /path/to/reviewed-guided-coding.tgz -C /path/to/empty-gc-review && \
-cd /path/to/empty-gc-review/libtbx/guided_coding && \
+cd /path/to/empty-gc-review/guided_coding && \
 shasum -a 256 -c SOURCE_MANIFEST.sha256 && \
 env GC_PAYLOAD_ROOT="`pwd -P`/payload" libtbx.python -I -B payload/tools/screen_check.py verify-source . && \
 cat payload/RELEASE && \
-grep -Eq '^guided_coding 2\.0 pilot r10 rev20 ' payload/RELEASE
+grep -Eq '^guided_coding 2\.0 pilot r10 rev21 ' payload/RELEASE
 ```
 
 Any failed command skips the rest of the block. In particular, a failed
@@ -62,7 +66,7 @@ listed checksum must stop **before executing the package's checker**.
 Stop dependent work on failure; a successful command appended later would
 not repair the failed check. Require all listed hashes, `VERIFIED complete
 source`, and the expected release identity from your handoff. The final
-`grep` checks that the release line begins with the `r10 rev20` label;
+`grep` checks that the release line begins with the `r10 rev21` label;
 it is not an exact revision check.
 
 The complete-source check rejects missing, changed and extra source files,
@@ -93,11 +97,11 @@ any existing personal skill path. Then run the complete guarded block with
 your canonical source path:
 
 ```bash
-cd /path/to/cctbx_project/libtbx/guided_coding && \
+cd /path/to/modules/guided_coding/guided_coding && \
 shasum -a 256 -c SOURCE_MANIFEST.sha256 && \
 env GC_PAYLOAD_ROOT="`pwd -P`/payload" libtbx.python -I -B payload/tools/screen_check.py verify-source . && \
 cat payload/RELEASE && \
-grep -Eq '^guided_coding 2\.0 pilot r10 rev20 ' payload/RELEASE && \
+grep -Eq '^guided_coding 2\.0 pilot r10 rev21 ' payload/RELEASE && \
 env GC_PAYLOAD_ROOT="`pwd -P`/payload" libtbx.python -I -B payload/tools/screen_check.py check-claude-version && \
 env GC_PAYLOAD_ROOT="`pwd -P`/payload" libtbx.python -I -B payload/tools/screen_check.py register-skill .
 ```
@@ -143,7 +147,7 @@ Open a new conversation in the project you want to change and enter:
 ```
 
 The primary working directory selects the target unless you explicitly
-name another project. Loading the procedure from `cctbx_project` does not
+name another project. Loading the procedure from `modules/guided_coding` does not
 make that repository the target.
 
 The [setup workflow](../payload/SETUP.md) first reads the current method

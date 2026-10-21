@@ -18,7 +18,7 @@ These parts have different responsibilities. Checking the kit's files establishe
 
 ### The shared kit
 
-The source normally lives in `cctbx_project/libtbx/guided_coding/`. In the website download, it is the `guided_coding/` folder inside `GuidedCoding/`. The kit is shared: a project does not need its own copy of the procedure.
+The source normally lives in `modules/guided_coding/guided_coding/`, the `guided_coding/` folder of a checkout of the `cctbx/guided_coding` repository. In the website download, it is the `guided_coding/` folder inside `GuidedCoding/`. The kit is shared: a project does not need its own copy of the procedure.
 
 Making the command available creates a symbolic link, which is a filesystem entry pointing to the kit's folder. The usual location is `~/.claude/skills/guided_coding`. If you use a separate Claude Code configuration, the link goes under that configuration instead.
 

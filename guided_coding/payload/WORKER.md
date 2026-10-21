@@ -3,7 +3,7 @@
 Read the current repository authority and the named job. Only after that authority explicitly adopts `DEVELOPER_GUIDE_CONTRACT.md` version **2026-09-17**, SHA-256 `ab4586810ef683702c8648267d5475fb50659b9fada4b2409293e93a87e6876b`, and identifies a separate project method, this release specializes that contract; the adjacent `ROLES.md` supplies its roles. They remain controlling where this file is silent only in a project with verified adoption. If adoption is absent or unclear, return to the SKILL.md adoption gate before guided work. Registering this skill does not itself authorize a new change, integration, or publication; use the Developer's current grant for each job.
 
 This file is read through the manually invoked `/gc` skill in the central
-`libtbx/guided_coding` source. The directory containing this file is the
+`guided_coding` source (the `guided_coding/` folder of the cctbx/guided_coding repository). The directory containing this file is the
 central `payload/` root. Read `screens/`, `templates/`, `tools/`, and
 `REVIEW_TRANSPORT.md` from **that root**, never from the target's `.claude/`.
 The target repository's `.claude/records/`, or the designated records
