@@ -59,12 +59,20 @@ say "Checking the new copy in $here"
 
 command -v git >/dev/null 2>&1 ||
   die "git is not on PATH, so the script cannot check that $here is a checkout of https://github.com/cctbx/guided_coding."
-top=$(git -C "$here" rev-parse --show-toplevel 2>/dev/null) ||
-  die "$here is not a Git checkout. It should be a clone of https://github.com/cctbx/guided_coding; if it is something else, move it aside and clone again (git clone https://github.com/cctbx/guided_coding.git)."
+# safe.directory for this one folder: in a shared installation the checkout
+# belongs to another user, and git would otherwise refuse to read it.
+gitq() { git -c safe.directory="$here" -C "$here" "$@"; }
+if ! top=$(gitq rev-parse --show-toplevel 2>&1); then
+  case "$top" in
+    *"not a git repository"*)
+      die "$here is not a Git checkout. It should be a clone of https://github.com/cctbx/guided_coding; if it is something else, move it aside and clone again (git clone https://github.com/cctbx/guided_coding.git)." ;;
+    *) die "git could not read the checkout $here: $top" ;;
+  esac
+fi
 top=$(cd "$top" 2>/dev/null && pwd -P) || die "cannot open the checkout's top folder $top"
 [ "$top" = "$here" ] ||
   die "$here is inside the Git checkout $top, not the top of a clone of https://github.com/cctbx/guided_coding."
-origin=$(git -C "$here" config --get remote.origin.url 2>/dev/null) || origin=
+origin=$(gitq config --get remote.origin.url 2>/dev/null) || origin=
 case "$origin" in
   https://github.com/cctbx/guided_coding | https://github.com/cctbx/guided_coding.git | \
   git@github.com:cctbx/guided_coding | git@github.com:cctbx/guided_coding.git | \
@@ -195,14 +203,6 @@ def report(status, where, detail):
     print("  %s: %s" % (status, detail))
 
 
-def is_kit_folder(path):
-    """A guided_coding kit folder: named guided_coding, with its source manifest
-    and release file."""
-    return (os.path.basename(path) == "guided_coding" and
-            os.path.isfile(os.path.join(path, "SOURCE_MANIFEST.sha256")) and
-            os.path.isfile(os.path.join(path, "payload", "RELEASE")))
-
-
 def remove_leftovers(config):
     """Remove leftover temporary links of this script (an interrupted run);
     report and keep anything else with the temporary-name prefix."""
@@ -210,12 +210,12 @@ def remove_leftovers(config):
         if not name.startswith(TEMP_PREFIX):
             continue
         path = os.path.join(config, name)
-        if os.path.islink(path) and is_kit_folder(os.path.realpath(path)):
+        if os.path.islink(path) and os.path.realpath(path) == kit:
             os.unlink(path)
             print("  removed a leftover temporary link from an interrupted run: %s" % path)
         else:
-            print("  NOTE: left alone %s: it has this script's temporary name but is not "
-                  "its temporary link" % path)
+            print("  NOTE: left alone %s: it has this script's temporary name but does not "
+                  "point to this kit, so it is not known to be this script's own link" % path)
 
 
 def write_note(config, dest, text, target):
@@ -346,12 +346,16 @@ def examine(label, config, explicit):
                 old_phenix == phenix or
                 (os.path.exists(old_phenix) and os.path.realpath(old_phenix) == phenix))
             if not same and not from_other_phenix:
+                if old_phenix is None:
+                    place = ("a cctbx_project copy outside any PHENIX folder (%s)"
+                             % os.path.join(old_root, "cctbx_project"))
+                else:
+                    place = "the old copy in a different PHENIX folder (%s)" % old_phenix
                 return report(
                     "NOT MOVED", where,
-                    "%s points to the old copy in a different PHENIX folder (%s), not this "
-                    "one (%s). It was left unchanged. To move it to this kit anyway, run the "
-                    "script again with --from-other-phenix"
-                    % (dest, old_phenix or os.path.dirname(old_root), phenix))
+                    "%s points to %s, not to this PHENIX folder (%s). It was left unchanged. "
+                    "To move it to this kit anyway, run the script again with "
+                    "--from-other-phenix" % (dest, place, phenix))
         return migrate(where, config, dest, text, target)
     if exists and target == kit:
         return report("ALREADY MOVED", where, "%s already points to this kit; nothing changed"

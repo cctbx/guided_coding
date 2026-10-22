@@ -675,6 +675,56 @@ class MigrateTests(unittest.TestCase):
       self.assertFalse(os.path.exists(os.path.join(rel, NOTE)))
     self.each_shell(t)
 
+  # --- findings of the outside readings (before Stage 3) ---------------------
+
+  def test_checkout_owned_by_another_user(self):
+    """A shared installation: git refuses a checkout another user owns
+    ("dubious ownership"); GIT_TEST_ASSUME_DIFFERENT_OWNER makes git behave so."""
+    def t(sh, fx):
+      fx.register_old()
+      env = {"GIT_TEST_ASSUME_DIFFERENT_OWNER": "1"}
+      p = subprocess.Popen(["git", "-C", fx.repo, "rev-parse", "--show-toplevel"],
+                           env=fx.env(**env), stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+      control = p.communicate()[0].decode("utf-8", "replace")
+      if p.returncode == 0:
+        self.skipTest("this git does not honour GIT_TEST_ASSUME_DIFFERENT_OWNER")
+      self.assertIn("dubious ownership", control)
+      rc, out = fx.run(sh, **env)
+      self.assertEqual(rc, 0, out)
+      self.assertIn("origin: %s" % ORIGIN, out)
+      self.assertEqual(os.path.realpath(fx.dest), fx.kit)
+    self.each_shell(t)
+
+  def test_leftover_link_to_another_kit_left_alone(self):
+    def t(sh, fx):
+      fx.register_old()
+      other_kit = os.path.join(fx.root, "another clone", "guided_coding")
+      shutil.copytree(fx.kit, other_kit)
+      other = os.path.join(fx.config, PREFIX + "555")
+      os.symlink(other_kit, other)
+      rc, out = fx.run(sh)
+      self.assertEqual(rc, 0, out)
+      self.assertIn("left alone %s" % other, out)
+      self.assertEqual(os.readlink(other), other_kit)
+      self.assertEqual(os.path.realpath(fx.dest), fx.kit)
+    self.each_shell(t)
+
+  def test_old_copy_outside_any_phenix_folder(self):
+    def t(sh, fx):
+      clone = os.path.join(fx.root, "src", "cctbx_project", "libtbx", "guided_coding")
+      os.makedirs(clone)
+      fx.register_old(target=clone)
+      rc, out = fx.run(sh)
+      self.assertEqual(rc, 1, out)
+      self.assertIn("a cctbx_project copy outside any PHENIX folder (%s)"
+                    % os.path.join(fx.root, "src", "cctbx_project"), out)
+      self.assertNotIn("different PHENIX folder", out)
+      self.assertEqual(os.readlink(fx.dest), clone)
+      rc, out = fx.run(sh, "--from-other-phenix")
+      self.assertEqual(rc, 0, out)
+      self.assertEqual(os.path.realpath(fx.dest), fx.kit)
+    self.each_shell(t)
+
   # --- calling shells and options ------------------------------------------------
 
   def test_run_from_other_login_shells(self):
