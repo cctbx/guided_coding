@@ -1,255 +1,102 @@
-from __future__ import absolute_import, division, print_function
-"""Repository test of the GuidedCoding kit, the guided_coding/ folder beside this file.
+"""Static checks of the GuidedCoding skill in guided_coding/ (revision 22).
 
-Copies the files listed in SOURCE_MANIFEST.sha256 to a private temporary
-directory and runs the package's own unit tests there (skill registration,
-source verification, Claude Code version gate, evidence and bundle checks),
-so that bytecode or other unlisted files in the installed package are never
-imported by this test. It fails if the tests fail, if they create files in
-the copy, or if any listed file in the package is missing or changed;
-unlisted files already present in the package are reported. It also runs the
-installer's precompile step, libtbx.py_compile_all -i, on another copy and
-checks that the copy still verifies while an unlisted module is still
-refused. The package and its tools are for macOS and Linux only: on Windows,
-or under Python 2, this test prints a skip line and OK. It first prints what
-is tested: the SHA-256 of SOURCE_MANIFEST.sha256, the RELEASE line and the
-Git HEAD when there is one. On Linux it checks whether exited orphan
-processes are reaped; where they are not (a container whose process 1 does not
-reap, such as the Azure CI containers started with `sleep infinity`), the
-auto-mode tests in tests/tst_auto_queue_v20.py would wait for zombies to exit,
-so that one file is skipped with a skip line and the other package tests run.
-When the package tests fail, their output is also written to stderr, which is
-what the libtbx test runner shows for a failed test.
+Checks that the skill's files are present and consistent: the SKILL.md frontmatter, every
+${CLAUDE_SKILL_DIR}/<file> reference, every "SKILL.md section" and "section" reference, the
+version line in each file, and that no retired name remains. Standard library only.
+How the procedure behaves is checked by running it in Claude Code (see EVIDENCE.md).
+Run: python3 tst_guided_coding.py   (prints OK, or the failures and exits 1)
 """
-import hashlib
 import os
 import re
-import shutil
-import subprocess
 import sys
-import tempfile
-import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-PACKAGE = os.path.join(HERE, "guided_coding")
+SKILL_DIR = os.path.join(HERE, "guided_coding")
+FILES = ["SKILL.md", "BATCH.md", "SETUP.md", "REVIEWER.md", "LOG.md"]
+VERSION = "1.3"
 
 
-def run(args, env, cwd):
-  p = subprocess.Popen(args, cwd=cwd, env=env,
-                       stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  out = p.communicate()[0].decode("utf-8", "replace")
-  return p.returncode, out
+def read(name):
+  with open(os.path.join(SKILL_DIR, name)) as f:
+    return f.read()
 
 
-def files_under(root):
-  result = set()
-  for dirpath, dirnames, filenames in os.walk(root):
-    for name in filenames:
-      path = os.path.join(dirpath, name)
-      result.add(os.path.relpath(path, root).replace(os.sep, "/"))
-  return result
-
-
-def listed_names():
-  names = set(
-    line.split("  ", 1)[1].strip()[2:]
-    for line in open(os.path.join(PACKAGE, "SOURCE_MANIFEST.sha256")))
-  names.add("SOURCE_MANIFEST.sha256")
-  return names
-
-
-def copy_listed(dest):
-  for rel in sorted(listed_names()):
-    target = os.path.join(dest, rel)
-    if not os.path.isdir(os.path.dirname(target)):
-      os.makedirs(os.path.dirname(target))
-    shutil.copyfile(os.path.join(PACKAGE, rel), target)
-  return dest
-
-
-def listed_problems():
-  problems = []
-  with open(os.path.join(PACKAGE, "SOURCE_MANIFEST.sha256")) as f:
-    for line in f:
-      digest, rel = line.rstrip("\n").split("  ", 1)
-      path = os.path.join(PACKAGE, rel[2:] if rel.startswith("./") else rel)
-      if not os.path.isfile(path):
-        problems.append("missing " + rel)
-        continue
-      with open(path, "rb") as g:
-        if hashlib.sha256(g.read()).hexdigest() != digest:
-          problems.append("changed " + rel)
-  return problems
-
-
-# Needs exited orphans to be reaped: its auto-mode tests wait for leftover
-# processes to exit, and the helper counts a zombie as alive.
-NEEDS_REAPING = "tst_auto_queue_v20.py"
-
-
-def orphans_are_reaped(timeout=5.0):
-  """Linux only: start a short-lived orphan (its shell exits at once) and watch
-  /proc. True when the orphan disappears or its stat cannot be read; False when
-  it is still a zombie at the timeout, as under a process 1 that never reaps;
-  None when /proc is absent or the probe cannot start. Only False skips tests."""
-  if not os.path.isdir("/proc/self"):
+def frontmatter(text):
+  m = re.match(r"---\n(.*?)\n---\n", text, re.S)
+  if m is None:
     return None
-  try:
-    p = subprocess.Popen(["/bin/sh", "-c", "sleep 0.3 >/dev/null 2>&1 & echo $!"],
-                         stdout=subprocess.PIPE)
-    out = p.communicate()[0].decode("ascii", "replace").strip()
-  except OSError:
-    return None
-  if p.returncode != 0 or not out.isdigit():
-    return None
-  stat = "/proc/%s/stat" % out
-  deadline = time.time() + timeout
-  state = None
-  while time.time() < deadline:
-    try:
-      with open(stat) as f:
-        state = f.read().rsplit(")", 1)[1].split()[0]
-    except (IOError, OSError):
-      return True  # gone: it exited and was reaped
-    except IndexError:
-      return None
-    time.sleep(0.1)
-  return state != "Z"
+  fields = {}
+  for line in m.group(1).splitlines():
+    key, sep, value = line.partition(":")
+    if sep:
+      fields[key.strip()] = value.strip()
+  return fields
 
 
-def exercise_package_tests(tmp, env):
-  copy = copy_listed(os.path.join(tmp, "tested", "guided_coding"))
-  before = files_under(copy)
-  patterns = ["tst_*.py"]
-  if sys.platform.startswith("linux") and orphans_are_reaped() is False:
-    modules = sorted(name for name in os.listdir(os.path.join(copy, "tests"))
-                     if re.match(r"tst_.*\.py$", name))
-    assert NEEDS_REAPING in modules, modules
-    patterns = [name for name in modules if name != NEEDS_REAPING]
-    print("skip: tests/%s (a test orphan was still a zombie after 5 s: exited "
-          "orphans are not reaped here, as in a container whose process 1 does "
-          "not reap); running %s"
-          % (NEEDS_REAPING, ", ".join(patterns)))
-  total = 0
-  for pattern in patterns:
-    rc, out = run([sys.executable, "-B", "-m", "unittest", "discover",
-                   "-s", "tests", "-p", pattern, "-v"], env, copy)
-    print(out)
-    if rc != 0:
-      sys.stderr.write(out)
-      sys.stderr.flush()
-    assert rc == 0, "package unit tests failed (exit %d): %s" % (
-      rc, "; ".join(re.findall(r"^(?:FAIL|ERROR): .*$", out, re.M)) or "see output")
-    ran = re.search(r"^Ran (\d+) tests? in ", out, re.M)
-    assert ran is not None and int(ran.group(1)) > 0, "no package tests ran"
-    total += int(ran.group(1))
-  print("package tests run: %d" % total)
-  created = sorted(files_under(copy) - before)
-  assert not created, "the package tests created files in the package: %s" % \
-    ", ".join(created)
+def section_numbers(text):
+  return set(re.findall(r"^## (\d+)\.", text, re.M))
 
 
-def exercise_real_precompile(tmp, env):
-  """Run the installer's precompile step, libtbx.py_compile_all -i, on a copy
-  of the listed files: the copy must still verify (reporting the bytecode it
-  ignored), and an unlisted module must still be refused."""
-  rc, out = run([sys.executable, "-B", "-c",
-                 "import importlib.util; importlib.util.find_spec("
-                 "'libtbx.command_line.py_compile_all').name"], env, tmp)
-  if rc != 0:
-    print("skip: libtbx.py_compile_all needs a libtbx environment")
-    return
-  if getattr(sys, "pycache_prefix", None):
-    print("skip: this Python writes bytecode outside __pycache__ (pycache_prefix)")
-    return
-  copy = copy_listed(os.path.join(tmp, "precompiled", "guided_coding"))
-  rc, out = run([sys.executable, "-m", "libtbx.command_line.py_compile_all",
-                 "-i", copy], env, copy)
-  assert rc == 0, out
-  compiled = [name for dirpath, dirnames, names in os.walk(copy)
-              for name in names if name.endswith(".pyc")]
-  assert compiled, "libtbx.py_compile_all wrote no bytecode"
-  checker = os.path.join(copy, "payload", "tools", "screen_check.py")
-  rc, out = run([sys.executable, "-I", "-B", checker, "verify-source", copy],
-                env, copy)
-  print(out.strip())
-  assert rc == 0 and "VERIFIED complete source" in out, out
-  assert "ignored %d precompiled" % len(compiled) in out, out
-  with open(os.path.join(copy, "payload", "tools", "extra.py"), "w") as f:
-    f.write("print('unlisted')\n")
-  rc, out = run([sys.executable, "-I", "-B", checker, "verify-source", copy],
-                env, copy)
-  assert rc == 2 and "extra source file" in out, out
-  print("precompiled copy verifies; an unlisted module is still refused")
-
-
-def identify_tested_source():
-  """Print what is tested: the SHA-256 of SOURCE_MANIFEST.sha256, the RELEASE
-  line and, when the package is in a Git checkout, `git rev-parse HEAD`, marked
-  dirty when `git status --porcelain` lists changes in the package (a missing git
-  or a non-Git directory is reported, never a failure)."""
-  with open(os.path.join(PACKAGE, "SOURCE_MANIFEST.sha256"), "rb") as f:
-    print("tested SOURCE_MANIFEST.sha256 sha256: %s" % hashlib.sha256(f.read()).hexdigest())
-  release = os.path.join(PACKAGE, "payload", "RELEASE")
-  if os.path.isfile(release):
-    with open(release, "rb") as f:
-      lines = f.read().decode("utf-8", "replace").splitlines()
-    print("tested RELEASE: %s" % (lines[0] if lines else "(empty)"))
+def run():
+  failures = []
+  for name in FILES:
+    if not os.path.isfile(os.path.join(SKILL_DIR, name)):
+      failures.append("missing file: guided_coding/%s" % name)
+  if failures:
+    return failures
+  texts = dict((name, read(name)) for name in FILES)
+  fm = frontmatter(texts["SKILL.md"])
+  if fm is None:
+    failures.append("SKILL.md: no frontmatter")
   else:
-    print("tested RELEASE: (no payload/RELEASE)")
-  try:
-    p = subprocess.Popen(["git", "-C", PACKAGE, "rev-parse", "HEAD"],
-                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, err = p.communicate()
-    head = out.decode("utf-8", "replace").strip() if p.returncode == 0 else None
-  except OSError:
-    head = None
-  if head:
-    # Checkpoint 5: say when the package differs from HEAD (the manifest hash above
-    # remains the identity of what was tested).
-    try:
-      p = subprocess.Popen(["git", "-C", PACKAGE, "status", "--porcelain", "--", "."],
-                           stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-      out, err = p.communicate()
-      if p.returncode != 0:
-        head += " (dirty state unknown)"
-      elif out.strip():
-        head += " (dirty: the package has changes not in this commit)"
-    except OSError:
-      head += " (dirty state unknown)"
-  print("tested git HEAD: %s" % (head or "not available (not a Git checkout, or no git)"))
+    if fm.get("name") != "gc":
+      failures.append("SKILL.md: name is %r, expected 'gc'" % fm.get("name"))
+    if fm.get("disable-model-invocation") != "true":
+      failures.append("SKILL.md: disable-model-invocation must be true")
+    if not fm.get("description"):
+      failures.append("SKILL.md: empty description")
+  sections = dict((name, section_numbers(text)) for name, text in texts.items())
+  for name, text in texts.items():
+    for ref in re.findall(r"\$\{CLAUDE_SKILL_DIR\}/([A-Za-z_]+\.md)", text):
+      if ref not in FILES:
+        failures.append("%s: reference to missing file %s" % (name, ref))
+    for other, num in re.findall(r"\b([A-Z]+\.md) §(\d+)", text):
+      if other not in sections:
+        failures.append("%s: reference to section %s of unknown file %s" % (name, num, other))
+      elif num not in sections[other]:
+        failures.append("%s: %s section %s does not exist" % (name, other, num))
+    plain = re.sub(r"\b[A-Z]+\.md §\d+", "", text)
+    for num in re.findall(r"§(\d+)", plain):
+      if num not in sections[name]:
+        failures.append("%s: section %s does not exist in this file" % (name, num))
+    if not re.search(r"[Vv]ersion %s\b" % re.escape(VERSION), text):
+      failures.append("%s: no version %s line" % (name, VERSION))
+    for retired in ("/lean", "LEAN_NOTES.md is the", "Lean GuidedCoding"):
+      if retired in text:
+        failures.append("%s: retired name %r" % (name, retired))
+  return failures
 
 
-def exercise():
-  identify_tested_source()
-  extra = sorted(files_under(PACKAGE) - listed_names())
-  if extra:
-    print("note: unlisted files present in the package (not used by this test): %s"
-          % ", ".join(extra))
-  # The tools refuse paths through symbolic links; macOS /var -> /private/var.
-  tmp = os.path.realpath(tempfile.mkdtemp(prefix="tst_guided_coding_"))
+def self_test():
+  """The checks must catch a broken cross-file section reference (outside review of revision 22)."""
+  original = read
+  def broken(name):
+    text = original(name)
+    if name == "BATCH.md":
+      text = text.replace("## 3. Stopping", "## 9. Stopping")
+    return text
+  globals()["read"] = broken
   try:
-    env = dict(os.environ)
-    env.pop("PYTHONPYCACHEPREFIX", None)
-    env.update({"TMPDIR": tmp, "PYTHONDONTWRITEBYTECODE": "1"})
-    exercise_package_tests(tmp, env)
-    exercise_real_precompile(tmp, env)
+    caught = [f for f in run() if "BATCH.md section 3" in f]
   finally:
-    shutil.rmtree(tmp, ignore_errors=True)
-  problems = listed_problems()
-  assert not problems, "listed source files: %s" % "; ".join(problems)
-  print("listed source files unchanged")
-
-
-def run_all():
-  if sys.platform == "win32":
-    print("skip: GuidedCoding tools are for macOS and Linux only")
-  elif sys.version_info[0] < 3:
-    print("skip: GuidedCoding tools need Python 3")
-  else:
-    exercise()
-  print("OK")
+    globals()["read"] = original
+  return [] if caught else ["self-test: a broken reference to BATCH.md section 3 was not caught"]
 
 
 if __name__ == "__main__":
-  run_all()
+  failures = run() + self_test()
+  for failure in failures:
+    print("FAIL: " + failure)
+  if failures:
+    sys.exit(1)
+  print("OK")

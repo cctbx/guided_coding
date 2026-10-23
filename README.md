@@ -1,92 +1,111 @@
-# Guided Coding
+# GuidedCoding
 
-Guided Coding is a Claude Code skill (`/guided_coding`, short name `/gc`) for
-making careful, reviewed changes to a project: a short plan, a tested change
-with its full diff for your decision, and publication as a separate choice.
+GuidedCoding is a Claude Code skill, `/gc`, for making a bug fix or a bounded change you can trust, with little of
+your attention:
+- a test that proves the fix;
+- one review pass;
+- extra checks only when a change needs them (a live call, a run on another platform, an outside review);
+- a short report.
 
-The kit is the [`guided_coding/`](guided_coding) folder. Start with its
-[User Guide](guided_coding/docs/GUIDED_CODING_USER_GUIDE.md); exact
-registration commands are in the
-[command reference](guided_coding/docs/GUIDED_CODING_COMMAND_REFERENCE.md),
-and what the checks establish is in
-[Verification and limits](guided_coding/docs/GUIDED_CODING_VERIFICATION.md).
+`/gc batch` runs a supervised list of such jobs one at a time.
 
-Earlier releases, up to revision 20, were developed in cctbx_project, in
-`libtbx/guided_coding`.
-This repository carries that history; revision 21 is the first release here.
+The skill is the [`guided_coding/`](guided_coding) folder. It is a set of instructions for Claude, with no code to
+install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
+
+## What the evidence says
+
+In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut program
+errors left per job from 0.81 to 0.47. GuidedCoding always includes that review pass, a test that proves the fix,
+and further checks when needed. GuidedCoding as now written has not itself been measured; it is being evaluated in
+real use. More in [EVIDENCE.md](EVIDENCE.md).
 
 ## Requirements
 
-macOS or Linux, Claude Code, Git, and Python 3.10 or newer. Auto mode also
-needs psutil. Windows is not supported.
+Claude Code, and Git. The review step uses Claude Code's code-review skill when it is available.
 
-## In a PHENIX installation
+## Register it (once)
 
-From your PHENIX folder (the one that contains `modules` and `build`):
+Make a link from your Claude Code skills folder to the `guided_coding/` folder. The commands below are for bash or
+zsh; if your shell is csh or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything,
+and they stop on anything unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
+
+In a PHENIX installation, from the folder that contains `modules` and `build`, clone the repository if it is not
+there yet, then register:
 
 ```
 git clone https://github.com/cctbx/guided_coding.git modules/guided_coding
+sh <<'END'
+SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+NEW="$PWD/modules/guided_coding/guided_coding"
+[ -f "$NEW/SKILL.md" ] || { echo "Not found: $NEW/SKILL.md. Run this from the folder that contains modules."; exit 1; }
+if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
+mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc"
+END
 ```
 
-If `modules/guided_coding` already exists, use it; do not delete it or clone
-over it. The kit is then `modules/guided_coding/guided_coding`. Register it
-once with the guarded block in the command reference ("One-time
-registration"), using that path. `libtbx.python` is the installation's Python;
-when it is not on your PATH, use `build/bin/libtbx.python` or
-`conda_base/bin/python3` by absolute path.
+Elsewhere, clone the repository anywhere, and run the same block with `NEW` set to its `guided_coding/` folder. Then
+start a new Claude Code conversation and type `/gc`. It should introduce itself. Optionally, run `/gc setup` once per
+project to save its build and test commands in `.claude/GC_NOTES.md`.
 
-### Moving from the copy in cctbx_project
+## If you used the earlier GuidedCoding kit (revision 21 or older)
 
-If your registration points to `cctbx_project/libtbx/guided_coding`, clone as
-above, then run, from your PHENIX folder:
+Revision 22 replaces the earlier kit with this much shorter procedure. The earlier kit had approval screens,
+evidence packets checked by its own tools, and an unattended auto mode. They are retired, and kept on the branch
+`full-kit-rev21`.
+
+What you gain, and what you lose:
+- **Gained:** a shorter, prompt-only procedure that asks for your attention only when a decision is needed.
+- **Lost:** the screens, packets, checker tools and the unattended auto mode. `/gc batch` is supervised, not
+  unattended.
+
+**To move:**
+- **Finish first.** Finish or stop any job or auto queue of the earlier kit before updating.
+- **Your link.** If your link is `~/.claude/skills/guided_coding` and points to `modules/guided_coding/guided_coding`,
+  updating the repository (`git pull`) is enough. The link keeps working and now gives the new `/gc`.
+- **A link into cctbx_project.** If your link points to `cctbx_project/libtbx/guided_coding` (revision 20 or older),
+  first clone as in "Register it", then run this from the folder that contains `modules` (in bash or zsh). It
+  replaces only a link that points to the cctbx_project copy, creates the new link before removing the old one, and
+  stops on anything else:
+
+  ```
+  sh <<'END'
+  SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+  OLD="$SKILLS/guided_coding"
+  NEW="$PWD/modules/guided_coding/guided_coding"
+  [ -f "$NEW/SKILL.md" ] || { echo "Not found: $NEW/SKILL.md. Clone first, and run this from the folder that contains modules."; exit 1; }
+  [ -L "$OLD" ] || { echo "$OLD is not a link (or does not exist); nothing changed."; exit 1; }
+  case "$(readlink "$OLD")" in
+    */cctbx_project/libtbx/guided_coding|*/cctbx_project/libtbx/guided_coding/) ;;
+    *) echo "$OLD points to $(readlink "$OLD"), not the cctbx_project copy; nothing changed."; exit 1;;
+  esac
+  if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed."; exit 1; fi
+  ln -s "$NEW" "$SKILLS/gc" && rm "$OLD" && ls -l "$SKILLS"
+  END
+  ```
+- **Two links.** Keep only one link to GuidedCoding. Two skills both named `gc` conflict.
+- **Your instructions.** If your `CLAUDE.local.md` adopts the earlier kit's "Developer–Guide Contract", that line can
+  go. Your project method file is not used by the new `/gc`; `/gc setup` writes short notes instead.
+- **Then** start a new Claude Code conversation.
+
+**To go back to the earlier kit:**
 
 ```
-sh modules/guided_coding/migrate_registration.sh
+cd modules/guided_coding
+git fetch origin full-kit-rev21
+git checkout full-kit-rev21
 ```
 
-It checks the new copy (listed hashes, complete source and release label), and
-re-points your registration (the link `~/.claude/skills/guided_coding`, and
-`$CLAUDE_CONFIG_DIR/skills/guided_coding` when that is set) only if it is the
-usual link to the old copy. It saves a restore note in the configuration
-folder and removes its own leftover temporary links from an interrupted run;
-otherwise it changes nothing, and it reports every place it checked. Running
-it again is harmless. If the Claude app uses its own configuration folder, add
-`--config-dir` and that folder. Then start a new Claude Code conversation,
-between guided jobs rather than during one.
-
-A PHENIX binary installation keeps its own copy, which keeps working. To move
-anyway, clone into a folder you can write to that is not part of the
-installation, for example `~/guided_coding`, and run the script from there.
-
-## Without PHENIX
-
-```
-git clone https://github.com/cctbx/guided_coding.git ~/guided_coding
-python3 -m venv ~/gc-python
-~/gc-python/bin/python -m pip install psutil
-```
-
-`python3` must be 3.10 or newer. Use `~/gc-python/bin/python` wherever the
-kit's commands say `libtbx.python`. Not `pip install --user`: the kit runs
-Python with `-I`, which ignores the user site folder. Then register
-`~/guided_coding/guided_coding` as the command reference describes.
+Your link then gives the earlier kit again. Keep your single link, and do not run the earlier kit's registration step
+(`register-skill`), which would add a second one. Restore your `CLAUDE.local.md` contract line if you removed it. To
+return to the new GuidedCoding, `git checkout master`.
 
 ## Tests
 
 ```
 python3 tst_guided_coding.py
-python3 tst_migrate_registration.py
 ```
 
-`tst_guided_coding.py` copies the kit's listed files to a scratch folder and
-runs the kit's own tests there. With libtbx available (for example with a
-PHENIX installation's `libtbx.python`) it also checks the installer's
-precompile step; otherwise it prints a skip for that part.
-`tst_migrate_registration.py` tests `migrate_registration.sh` under `/bin/sh`
-and, where it is installed, `dash`, and checks that the script's `EXPECTED_LABEL` matches the label in
-`guided_coding/payload/RELEASE`; a new release must update both in the same
-commit. CI runs both on Linux and macOS.
-
-## Licence
-
-The cctbx licence; see [LICENSE.txt](LICENSE.txt).
+It checks that the skill's files are present and consistent: the frontmatter, the cross-references between files
+(including section references into other files), and the version lines. It includes a check of its own that a
+broken cross-file reference is caught. It does not check whether Claude follows the procedure; that is checked by
+running it in Claude Code, and the recorded runs are listed in [EVIDENCE.md](EVIDENCE.md).

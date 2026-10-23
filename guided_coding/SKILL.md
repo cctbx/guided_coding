@@ -1,267 +1,226 @@
 ---
 name: gc
-description: Run GuidedCoding for an explicitly chosen coding task, or guide project setup and recovery with /gc setup.
+description: GuidedCoding for one bounded bug fix or change, or a supervised batch of them, by explicit request only.
 disable-model-invocation: true
 ---
 
-# GuidedCoding, by explicit request
+# GuidedCoding (version 1.3)
 
-The user's task is: $ARGUMENTS
+The developer's request is: $ARGUMENTS
 
-This is the one manual entry point to the central GuidedCoding source.
-The skill directory is `${CLAUDE_SKILL_DIR}`. Resolve that directory's
-canonical absolute path, including any personal-skill symlink; that is
-the procedure root. Its `payload/` directory is the procedure source.
-The session's project directory is `${CLAUDE_PROJECT_DIR}`. **The target
-repository is the repository containing that session directory when this
-command was invoked**, unless the user explicitly names another target. Never treat the
-procedure repository as the target merely because it holds this skill.
+GuidedCoding is for one bug fix or one bounded change. Its aims are that the developer spends as little attention as
+possible, and that the result can be trusted.
 
-Before guided work, replace the path below with the canonical procedure
-root and run the whole guarded Bash block. Do not split its dependent
-commands into separate shell calls or continue after a failed block.
-The kit's tools need Python 3.10 or newer; with an older Python each tool
-refuses before doing anything (exit 19, "requires Python 3.10 or newer").
-Every command here writes the interpreter as `libtbx.python`; any Python
-3.10 or newer serves in its place. Auto mode (`auto_queue.py`) also needs
-the psutil package; without it the helper stops with exit 18. Install it
-in a venv and run the kit with that venv's Python: `python3 -m venv DIR`,
-then `DIR/bin/python -m pip install psutil`, then use `DIR/bin/python`.
-Not `pip install --user`: the kit runs Python with `-I`, which ignores the
-user site directory. The other tools need only the standard
-library. The auto-mode start screen prints the absolute interpreter path
-of the Python that runs the kit (`screen_check.py stop-command` prints
-its `sys.executable`), so its stop line works from any Terminal whatever
-PATH is.
-In a cctbx or Phenix build, `libtbx.python` is the build's conda Python, which has psutil.
-When `libtbx.python` is not on PATH, use that build's `conda_base/bin/python3` by its absolute path.
+## 0. Starting up
 
-```bash
-cd /absolute/path/to/modules/guided_coding/guided_coding &&
-if command -v shasum >/dev/null 2>&1; then shasum -a 256 -c SOURCE_MANIFEST.sha256; else sha256sum -c SOURCE_MANIFEST.sha256; fi &&
-GC_PAYLOAD_ROOT="$(pwd -P)/payload" libtbx.python -I -B payload/tools/screen_check.py verify-source . &&
-cat payload/RELEASE &&
-grep -Eq '^guided_coding 2\.0 pilot r10 rev21 ' payload/RELEASE
-```
-After changing directory, the listed-hash check must succeed before any
-checker code runs. It uses `shasum` when that command exists and otherwise
-`sha256sum` (some Linux systems); the tool is chosen by presence, and a
-failed check is never retried with the other tool. The
-checker then checks the **complete source inventory** and rejects unlisted files,
-links and changed bytes. The isolated Python invocation prevents an
-unlisted module in `payload/tools/` from loading during verification.
-A directory, checksum, inventory or release failure returns nonzero and
-stops all dependent work. Only after this block succeeds, read
-`payload/DEVELOPER_GUIDE_CONTRACT.md`.
-This revision requires the release line to begin `guided_coding 2.0 pilot r10 rev21 `
-(the label, not a mention of it later in the line); if it does not,
-stop and report the different version before starting a guided change.
+- **What was asked.**
+  - **`/gc` with nothing after it:** in a few lines, say what GuidedCoding does: one bounded change, a proving test,
+    one review pass, extra checks only when triggered, and a short report. Mention `/gc setup` and `/gc batch`, then
+    ask for the task.
+  - **`/gc setup`:** read `${CLAUDE_SKILL_DIR}/SETUP.md` and follow it. Do nothing else.
+  - **`/gc batch ...`:** read `${CLAUDE_SKILL_DIR}/BATCH.md` and follow it.
+  - **`stop` or `status` while a batch is running in this session:** stop the batch, or report on it (BATCH.md §3).
+  - **An old-kit command:** exactly `help`, `status`, `history`, `uninstall` or `stop`, or the word `auto` on its own
+    or followed by a space (`auto`, `auto resume`, `auto <tasks>`). Start no coding job. Words that merely begin with
+    "auto" (AutoSol, autobuild, auto_sharpen) are ordinary tasks. Say that these belonged to the earlier GuidedCoding
+    kit, which has been retired. For `auto`, point to `/gc batch`, which runs several tasks as a supervised sequence;
+    it is not unattended.
+  - **Anything else** is the task.
+- **Read the project notes.** Look for `.claude/GC_NOTES.md`, or else `.claude/LEAN_NOTES.md`, in the session's folder
+  and its parent folders, and use the first one found.
+  - **Coverage.** If the notes list the repositories they cover, and the task's repository is not among them, treat
+    the job as having no notes.
+  - **Precedence.** The notes take precedence over the project's personal instructions and method. Shared team
+    instructions take precedence over the notes. Read the repository's `CLAUDE.md` and `AGENTS.md`, if present, even
+    if the session did not load them. Name any conflict in the report.
+  - **No notes.** Do not run a setup interview. Find the build and test commands from the project itself, and say once
+    in the final report that `/gc setup` would save them.
+- **Name the session.** If the app lets you rename the session and the title was generated by the app, call it
+  `GC: <short task>`. Never let this block the work.
 
-Once the source check has passed, give the session a useful name. If the
-client offers a session-rename tool (Claude Code Desktop does; a CLI
-session does not) and the current title was generated by the app, rename
-the session to `GuidedCoding: <task or control request>`. If the client
-reports that the user set the title, or the user declines the rename,
-leave it and do not ask again. On the CLI, say once:
-`To name this session: /rename GuidedCoding: <task>`. A failed or
-unavailable rename never blocks the work, and a title is not evidence of
-which skill loaded.
+## 1. Start
 
-## Reporting to the Developer
+- **Restate the task** in one or two sentences. Name the triggers that apply, or say "no triggers".
+- **Record the starting point.** For each repository you will touch, note the starting commit
+  (`git rev-parse HEAD`) and `git status --short`.
+- **Consequential work.** This covers:
+  - installations and migrations;
+  - changes to shared tooling or safety mechanisms (including GuidedCoding itself);
+  - operations that could cause significant irreversible damage;
+  - a large job whose parts cannot be separated.
 
-Whenever you pause or finish and return control to the Developer (setup,
-control requests and guided work alike), report briefly, in plain English:
+  Ordinary code that may later go into a release does not make a job consequential work. For consequential work,
+  separate preparing the change from carrying it out:
+  - **Prepare** the change as a reversible candidate, and test it. If preparing it is itself risky, get the
+    developer's approval of a short plan first.
+  - **Before the irreversible step** (installing, migrating real data, publishing, or the operation itself):
+    1. get the developer's approval of a short plan;
+    2. make the backup or recovery step and check it: say what will be restored and how, and confirm that the backup
+       exists;
+    3. complete an outside review (§3) of the plan and the prepared change, and resolve its important findings. A
+       prepared review file is not enough. The developer may waive the review explicitly; the report then says so;
+    4. touch a shared installation only on the developer's explicit go.
+- **Large jobs.** If the task bundles separable changes, propose splitting it, and running the parts with
+  `/gc batch`.
+- **The five triggers.** L, P, R and D are checked at the start; Q is checked after the review in §2. Each adds a
+  step in §3.
+  - **L. Live service.** Whether the fix works can only be confirmed against a live outside service or product: an
+    LLM or provider API, a model name or default, a network service, or a host application.
+  - **P. Other platform.** The defect is reported for a platform other than this machine (Windows, Linux, a container,
+    CI), even if parts of the code can be run here.
+  - **R. Install for others.** The task says the change goes straight to a place others install from, such as a
+    shared installation. An ordinary push is handled in §4.
+  - **D. Data or credentials.** The change writes, moves or deletes existing user files, or handles credentials.
+    Writing new output files is not enough.
+  - **Q. Open correctness question.** After §2, an important question about whether the change is correct remains
+    unresolved, or there is no convincing test of its essential behaviour. For P, the platform commands are the
+    pending proof; Q applies only if the mechanism itself is still in doubt.
+- **When unsure.** If you are unsure whether L or P applies, treat it as applying. R, D and Q apply only as worded.
+- **Scope rule.**
+  - Proceed with the routine implementation, tests and documentation needed to accomplish the requested task.
+  - Ask before changing intended behaviour, public interfaces, defaults, file formats, or the agreed project scope
+    (including work in another repository). Changes the task explicitly requests need no question.
+  - Ask the same way if the task leaves the intended behaviour open.
+  - To ask, give the options, a recommendation and one question the developer can answer in a word.
 
-- **The practical situation first**, before technical details: what is
-  finished, what is published, and what remains only on his machine.
-  Define a necessary technical term when you first use it.
-- **Recommend the next step and say why.** If he needs to decide, explain
-  the options, their main tradeoffs and your recommendation; never ask him
-  to choose a technical method without explaining its consequences. If
-  facts are missing, recommend the smallest useful check. If no action is
-  needed, say so.
-- **Effects on his work:** how a proposed action affects his existing work
-  and how that work will be preserved. If a requirement was waived, say
-  plainly what was waived and what uncertainty remains.
-- **Complete next steps in the final message:** put every step he must do
-  next in your last message, even if you listed it earlier; never refer him
-  to earlier messages.
-- Keep commit identifiers and detailed history in supporting evidence.
-- Do not create extra pauses, approvals or work merely to provide a
-  recommendation.
+## 2. Fix and check
 
-GUIDE.md and WORKER.md apply this rule to plans, stops and decision
-screens; the STOP and PUBLICATION screens carry `Recommendation:` and
-`Next:` lines, as PLAN, ACCEPT and RESULT do.
-Show each decision screen as `screen_check.py present` prints it: the bold
-attention line, then the checked screen as a quoted block (`> ` lines, bold
-section names and **Your choice:**), pasted in full and not inside a code
-fence (revision 19; before, a fenced block).
+- **Fix the problem the task describes,** within the scope rule.
+- **Write a proving test** that fails on the old code for the reason in the task and passes on the new code.
+  - **The scratch folder.** Use the folder the notes name, or else the session's scratchpad, or
+    `/tmp/gc-<short task name>-<YYYYMMDD-HHMM>/`. Save test outputs there.
+  - **The old code.** Before you first edit a source file, save a copy of it in the scratch folder. That copy is the
+    old code, including any uncommitted changes that were already there.
+  - **Use an isolated copy when practical,** and confirm that the tests import that copy: print the module's
+    `__file__`. The notes may say how to isolate it, or whether swapping files in place is allowed; follow them.
+  - **If you swap files in place** (only where the notes allow it):
+    1. make sure you have exclusive use of the affected source and build. Ask the developer, unless the notes say
+       this installation is used by one session at a time. If exclusive use cannot be established, use an isolated
+       copy, or leave the old-code check pending;
+    2. compare `git rev-parse HEAD` and `git status --short` with your record from §1, and record `shasum -a 256` of
+       every file you will swap. If anything changed that you did not change, do not swap, and report it;
+    3. put the saved copies in place, keeping copies of your new versions;
+    4. run the test, leaving the new test and any new fixtures where they are; for compiled code, rebuild first;
+    5. put your new versions back, and rebuild if needed, even if the test fails;
+    6. confirm that every swapped file's hash matches your new version again, and that HEAD and
+       `git status --short` match step 2.
 
-**Read a step before describing it.** Before you tell him what a Guided
-Coding step will show or ask (the registration step, `/gc setup`, a
-decision screen), read the procedure for that step: `payload/SETUP.md`, the
-screen files in `payload/screens/`, and the User Guide's section for the
-registration step. Describe what he will actually see, where to find it (an
-app approval box shows only a summary; the full proposed text is in the
-conversation above it) and what to check before approving. If you have not
-read the relevant file, say that your description is unverified.
+    If the restoration is interrupted or uncertain, stop and report that the installation must not be used until it
+    has been checked.
+  - **Never use `git stash`** in a checkout that may hold other work.
+  - **If no such test is feasible,** say why and give the best other evidence. Then check trigger Q.
+- **Run the existing tests** for the code you touched, and any further suites the notes or team instructions require.
+- **Review the change.** Invoke the code-review skill with arguments "high --fix --max-findings default" on the diff
+  of each repository you touched, and apply its fixes. Limit the review and its fixes to the files this job changed;
+  never touch other uncommitted work.
+  - **If the code-review skill is not available,** review the diff yourself once: correctness, unintended behaviour
+    changes, and whether the tests prove the fix. The report says that this fallback was used. It is not the review
+    the method was built on.
+  - Check each fix the review applied. Revert at once any fix that is wrong, or that changes behaviour beyond the
+    task (the scope rule), even a small one or one you think is an improvement. A fix changes behaviour beyond the task
+    if it changes what the code does in any case the task did not mention: error handling, exit status, failure
+    modes, defaults, outputs. Raise it as a decision instead of keeping it, and say what you reverted.
+  - For each finding it did not fix: fix it; or, if it is not a real problem, drop it with a one-line reason; or, if
+    it needs the developer's decision, keep it for the report.
+  - Rerun the tests after any change.
 
-**Directions for a new conversation.** Check his operating system first.
-Supported: the Claude app on macOS, and Claude Code in Terminal on macOS or
-Linux. Windows is not supported. For the app: open the Code tab and start a
-new session; under Environment choose Local, then My computer; at the
-bottom of the page use the folder selector to choose the folder (in the Mac
-folder window press Cmd+Shift+G and paste the full path); type the message
-and send it. Mention the Terminal alternative: `cd` to the folder, then run
-`claude`. On Linux give the Terminal steps. On Windows, say that Guided
-Coding is not supported there, explain what it needs (macOS or Linux,
-Claude Code, Git, Python 3.10 or newer, and psutil for auto mode) and ask how he wants
-to proceed.
+## 3. Added steps, only for the triggers that apply
 
-## Setup and control requests
+- **L (live service): make one real call for each changed path,** to the real service with the real model or default.
+  - Use safe test inputs and the keys the developer has provided.
+  - If a call fails or a reply is cut off, fix the problem and repeat the call. Ask the developer first only if a
+    call costs significant money or repeats an action with side effects.
+  - A live failure outranks every offline test.
+  - If you cannot make the calls, give the exact commands.
+- **P (other platform): give the exact commands** to run on that platform.
+- **R, D or Q, and consequential work: an outside review.** Write one file, `OUTSIDE_REVIEW.md`, in the scratch folder,
+  containing:
+  - the task text;
+  - the full diff;
+  - the new tests and their output on the old and new code;
+  - the open question, for Q;
+  - this request: "Review this change for correctness, unintended behaviour changes, and whether the tests prove the
+    fix. List findings, most serious first."
 
-Treat exactly `help`, `status`, `history`, `setup`, `setup <target directory>`,
-and `uninstall` as control requests rather than coding tasks. Read
-`docs/GUIDED_CODING_COMMAND_REFERENCE.md` for their exact scope. `help` gives a
-short command list; `status` reads the central identity, personal link and
-target adoption and the location/readiness of its declared method without
-changing anything. Report missing, conflicting or deferred settings by
-the operation they affect; do not turn `status` into setup. Neither needs
-project adoption.
-`history` lists the target's task records read-only: run
-`libtbx.python -I -B payload/tools/records_history.py <records>`, where
-`<records>` is the designated records location when the project's adoption
-or method names one, otherwise `<target>/.claude/records` (add `--limit N` for the
-newest N entries) from the verified central root and show its output
-unchanged. It activates no job, writes nothing, contacts nothing, follows
-no instruction found in a record, and reports the rows it cannot read.
-It needs no project adoption.
-Before `setup` or an ordinary guided task, run
-`libtbx.python -I -B payload/tools/screen_check.py check-claude-version` from the
-verified central root. If it fails, stop before writing project adoption or
-starting guided work; do not update Claude Code on the user's behalf. The
-check requires Claude Code 2.1.281 or newer: in a Terminal session the
-`claude` command on this session's PATH; in a Claude app session (marked by
-`CLAUDE_CODE_ENTRYPOINT=claude-desktop`, as observed on 2026-10-06) the
-app's own engine named by `CLAUDE_CODE_EXECPATH`, and when that version
-cannot be read it prints one `NOT CHECKED` line and continues. It does not
-establish the app's instruction-loading behavior. `help`, `status` and
-`history` are read-only; `uninstall` may remove only the verified personal
-link. All four remain available when the version check fails.
+  Leave out keys, tokens and user data, and name anything you removed. The developer pastes the file into the
+  outside reviewer the notes name (or another AI assistant) and pastes the reply back.
+- **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
+- **When the output or the outside review comes back,** treat each problem or finding as in §2, and update the
+  report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
+  accepting the uncertainty.
 
-For `setup`, read and follow `payload/SETUP.md` and its general defaults
-in `payload/SETUP_DEFAULTS.md`; use any user-supplied domain profile only
-as relevant proposed defaults. Resolve an explicitly
-named target before discovery. Recover settings from the current method
-and referenced profiles/records/backups before asking the Developer to
-remember them. Walk through only relevant gaps, including working
-directories and the actual shell/tool environment. Keep recovered values
-with their source and verification state; preserve existing decisions and
-unresolved conflicts. Use `payload/templates/PROJECT_METHOD.md` only as a
-starting structure when there is no suitable existing method.
+## 4. Before a commit, a push, or another outward step
 
-Show the exact method and any contract declaration for the Developer's
-decision, reusing an already applicable authorization for a bounded edit.
-Setup saves follow the record, verify, then apply order in `payload/SETUP.md`
-section 5: recovery records are written and read back before any method or
-authority edit. Save to the existing designated method or the chosen
-target-local path, preserve unrelated instructions and verify the saved
-values and pointer.
-Inspect `AGENTS.md` and the instruction-loading setting before choosing an
-authority; do not blindly create `CLAUDE.local.md`. Adoption is personal
-and untracked (SETUP.md section 5): never propose it for a shared, tracked
-`CLAUDE.md` or `AGENTS.md`; a method points to the project's `AGENTS.md`
-rather than copying it. Default setup is local
-read-only discovery and an authorized configuration save. Any remote check
-or execution needs its own applicable authorization as described in
-SETUP.md. Setup alone does not start a coding task. If adoption is declined,
-leave the project unchanged and offer ordinary assistance.
+An outward step is a push, a publication, an installation, or a run on real user data. (Consequential work, §1, is a
+different and rarer thing: it also needs a plan, a recovery step and an outside review.)
 
-For `uninstall`, inspect the personal `skills/guided_coding` entry under
-`CLAUDE_CONFIG_DIR` if set, otherwise `~/.claude`. Remove **only** that
-entry if it is a symlink whose canonical target is this verified procedure
-root; refuse a real directory, a different link target, or an uncertain
-path. Never remove the source, project authorities, methods or records.
-Explain that already loaded instructions persist in this conversation,
-and use a fresh conversation for ordinary work. No project adoption is
-needed to uninstall the personal link.
+- **Commit** only when the developer asks, after showing the complete diff. Approving the content is not a request to
+  commit. Follow the commit rules in the notes and team instructions.
+- **Push** only when the developer asks, and only where the notes and team instructions allow an agent to push.
+  Where they do not, give the developer the exact push command.
+- **Name what is open first.** Do not proceed while any of the following holds, unless the developer explicitly
+  accepts the limitation:
+  - a live call, platform check or outside review is pending;
+  - an essential check fails;
+  - an important correctness finding remains unresolved. A finished outside review does not resolve its own
+    findings.
 
-**Auto mode.** `auto <goal or job list>`, `auto status`, `auto resume` and
-`stop` are auto-mode requests (this release has no `auto integrate`; say so
-if asked, and use ordinary guided work for integration). After the
-source and version checks and the same project adoption gate as an
-ordinary task, read `payload/ROLES.md`, `payload/GUIDE.md`,
-`payload/WORKER.md` and then `payload/AUTO.md`, and follow `AUTO.md`. The
-queue helper is `auto_queue.py` in the procedure root; run it as
-`TMPDIR="$(cd "${TMPDIR:-/tmp}" && pwd -P)" libtbx.python -I -B <procedure root>/auto_queue.py`.
-`stop` works without
-adoption and without the coding conversation: it only asks the helper to
-stop the active queue. `/gc auto` grants only what `AUTO.md` lists; it never
-authorizes integration, publication or server access.
+  A request to push is not by itself acceptance: name what is open, and proceed only when the developer confirms.
+- **Update before pushing.** If the branch must be updated or rebased first (for example `git pull --rebase`), check
+  what changed. Rerun the checks those changes affect, and resolve any conflicts. Reuse earlier evidence only where it
+  still applies.
+- **Offer the full suite.** If the notes name a full suite to run before a push, offer to prepare it.
+  - **Prepare the commands** from the notes: getting the candidate onto the server, the suite command and log name,
+    and running it in the background with `nohup`. Mark anything the notes mark unverified as "to confirm".
+  - **Recommend a baseline.** Say whether a recent recorded result of the same suite can serve as the baseline, or
+    whether a baseline run is needed, and why. A recorded result serves only if the base code, build, installation,
+    command, process count, host and test roster all match (and any stricter rule in the notes).
+  - **Who launches it.** Unless the notes say otherwise, give the commands for the developer to launch.
+  - **Push after the result,** when the developer has seen it and says to push, or says to push without it. Compare
+    the candidate's roster and outcomes with the baseline's, not just the failure counts.
+- **A release** also needs a short checklist, confirmed with the developer:
+  - the destination;
+  - the test results;
+  - the developer's approval;
+  - the recovery procedure.
 
-After handling a control request, stop; do not fall through into the
-guided-task activation or start work on an unrelated task.
-For an ordinary `/gc <task>`, continue with the activation check below.
-The contract's project activation rule is a separate gate: inspect the
-**target repository's current authority** (including its applicable
-`CLAUDE.md`, `CLAUDE.local.md`, an actually loaded `AGENTS.md` if used, and
-any project-designated authority). It
-must explicitly adopt the contract version **2026-09-17**, SHA-256
-`ab4586810ef683702c8648267d5475fb50659b9fada4b2409293e93a87e6876b`,
-and define or identify that project's method separately. Compare the
-declared identity with the verified central contract bytes. A personal
-skill link, `/gc` invocation, old records, a bundled contract, or this
-task's approval alone does not establish project adoption. If the
-declaration, project method or current authority is absent or uncertain,
-pause **before** claiming that Guide and Worker govern the target or
-making a guided change. Use `payload/SETUP.md` to locate/recover a method
-or walk through the relevant missing setup, rather than only asking the
-Developer for facts or a filename. Show a small proposed adoption
-declaration naming the exact contract identity and that project's
-specific method; obtain the Developer's project adoption decision.
-Only on explicit authorization, record it in the current project
-authority chosen by the Developer, preserving existing instructions,
-then verify the saved declaration and method. If adoption is declined,
-offer ordinary assistance without claiming GuidedCoding controls it.
+  If the release installs anything, it is also consequential work (§1).
 
-Once adoption is verified, read `payload/ROLES.md`, `payload/GUIDE.md`
-and `payload/WORKER.md`. The Guide establishes scope and roles; the Worker
-follows the bounded change procedure.
-Check the saved method against the requested operation even if adoption
-already exists. For missing or conflicting settings, changed machine/shell
-or checkout, or a failed environment lookup, follow `payload/SETUP.md` for
-only the affected capability. Reuse settled setup; remote work marked
-deferred or not applicable does not block independent local work. Do not
-equate a no-push instruction with a ban on configuration discovery, or
-with permission for a server run.
-The procedure is read-only for the task. Recheck both the listed hashes
-and the complete inventory before integration, publication, or running a
-central tool. Use `libtbx.python -I -B` (as defined above) for later central tool invocations so
-local modules cannot shadow the standard library and the tools do not
-create unlisted bytecode in the source directory. If verification fails
-or its source changes while the task runs, stop dependent work and report
-the mismatch.
-Record the procedure release and the SHA-256 of `SOURCE_MANIFEST.sha256`
-in the target's local change record so a later reviewer knows which exact
-instructions and tools were used.
+## 5. Final report (this form, nothing longer)
 
-Set `GC_PAYLOAD_ROOT` to the **canonical absolute `payload/` path inside
-each shell command** that calls a procedure tool; shell state does not carry
-between tool calls. Read screens, templates, briefs and Python tools from
-that central directory. Keep each project's state and records in that
-project's own `.claude/records/`, or in the designated records location its
-adoption or method names (SETUP.md). Never copy procedure instructions into
-the target repository. Do not overwrite its existing records, settings,
-profile, permissions, or other project instructions. Check its existing
-approval and any revocation before consequential actions.
+- **Ready to use:** yes, or no. Say no while a step is pending, an essential check fails, or an important correctness
+  finding is unresolved. List what is open and explain the consequence. Name exactly what the developer accepted or
+  skipped.
+- **Triggers:** the ones that applied, or "none".
+- **Changed:** what the change does, in two to four lines, with the files.
+- **Proof:** the proving test and its result on the old and new code, and where the outputs are. Or why there is no
+  proving test, and the evidence used instead.
+- **Checks run:**
+  - the existing tests;
+  - the review: findings reported, fixed automatically, fixed by you, dropped (with reasons), and kept for the
+    developer, and whether the fallback was used;
+  - live calls, or outside review (done, pending, or skipped), if any.
+- **Not checked:** anything that was not, or could not be, run or confirmed: platforms, live behaviour, the GUI, long
+  runs.
+- **Changes to behaviour, interfaces, defaults, formats or scope that the task did not request:** each one, with the
+  developer's answer. Or "none".
+- **Conflicts between instructions:** any conflict between the notes and team instructions, and which rule you
+  followed. Or "none".
+- **Decisions for you:** at most a few. Each gets a line of background, the options, your recommendation, and the
+  question. If there are none, say "none".
+- **Recommended next action, and why:** always, even with no decisions. It is a recommendation, not a new stop.
+  - **A second reader would help** when the change is subtle, touches shared code or many callers, or you are not
+    confident the tests would catch a plausible wrong fix. Then recommend an independent reviewer. If the developer
+    agrees, follow `${CLAUDE_SKILL_DIR}/REVIEWER.md`.
+  - **The job has turned into consequential work** (§1): recommend the plan, recovery step and outside review, or
+    splitting the job, and say why.
 
-If there is no task after `/gc`, give the first-use introduction, mention
-`/gc setup` for choosing a project and recovering/configuring its working
-environment, and ask for the task without starting a change; do not demand project adoption for an
-introduction or explanation. If asked how GuidedCoding works, answer
-without opening a change. A normal prompt in a fresh conversation does not
-invoke this manual-only skill. The instructions remain in *this* conversation
-once invoked; a later ordinary task needs a fresh conversation or `/clear`.
-Neither this command nor its symlink authorizes installation, integration,
-server work, outside delivery or publication.
+Every claim that something works, was fixed or was checked must be backed by a test, a command output or the diff.
+If it is not, list it under Not checked.
+
+## 6. Job log (only if the notes turn it on)
+
+When the job ends, follow `${CLAUDE_SKILL_DIR}/LOG.md` to add one line to the log file the notes name.
+
+---
+Version 1.3, 2026-10-23.

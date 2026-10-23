@@ -1,27 +1,20 @@
-# The kit's tests (through tst_guided_coding.py) and the migration script's
-# tests, on Linux and macOS. Without libtbx, tst_guided_coding.py prints a skip
-# for its precompile branch; that branch runs on a PHENIX installation.
+# Static checks of the GuidedCoding skill (tst_guided_coding.py), on Linux and macOS.
 
 name: tests
 on: [push, pull_request, workflow_dispatch]
 
 jobs:
   tests:
-    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    name: ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest]
-        python: ["3.10", "3.12"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python }}
-      - name: Install psutil
-        run: python -m pip install psutil
-      - name: Kit tests
+          python-version: "3.12"
+      - name: Skill checks
         run: python tst_guided_coding.py
-      - name: Migration script tests and release-label check
-        run: python tst_migrate_registration.py
