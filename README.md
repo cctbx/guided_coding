@@ -94,7 +94,8 @@ In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass 
 program errors per job from 0.81 to 0.47. GuidedCoding always includes a review pass (Claude Code's code-review
 skill, the review the study measured, when it is available; otherwise Claude reviews the change itself and says so)
 and, where feasible, a test that proves the fix, with further checks when needed. GuidedCoding as now written has not
-itself been measured; it is being evaluated in real use. More in [EVIDENCE.md](EVIDENCE.md).
+itself been measured; it is being evaluated in real use. [EVIDENCE.md](EVIDENCE.md) goes through the main
+parts of `/gc` and what the evidence says about each.
 
 ## If you used the earlier GuidedCoding kit (revision 21 or older)
 

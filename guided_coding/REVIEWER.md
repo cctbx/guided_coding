@@ -1,7 +1,8 @@
 # Independent reviewer step (`/gc`, only when the developer agrees)
 
-Use this step only when the developer has agreed to it. It costs about three times an ordinary review pass; use it
-when a second reader would help (SKILL.md §5). Version 1.3.
+Use this step only when the developer has agreed to it. It takes about three times as long as an ordinary review
+pass, and in the study it was not clearly better than a second ordinary review; use it when a second reader would
+help (SKILL.md §5). Version 1.3.
 
 1. **Criteria.** From the task text alone, not from your change, write the acceptance criteria in
    `<scratch folder>/review/CRITERIA.txt`.
