@@ -14,22 +14,60 @@ install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
 
 ## What the evidence says
 
-In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut program
-errors left per job from 0.81 to 0.47. GuidedCoding always includes that review pass, a test that proves the fix,
-and further checks when needed. GuidedCoding as now written has not itself been measured; it is being evaluated in
-real use. More in [EVIDENCE.md](EVIDENCE.md).
+In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut missed
+program errors per job from 0.81 to 0.47. GuidedCoding always includes a review pass (Claude Code's code-review
+skill, the review the study measured, when it is available; otherwise Claude reviews the change itself and says so)
+and, where feasible, a test that proves the fix, with further checks when needed. GuidedCoding as now written has not
+itself been measured; it is being evaluated in real use. More in [EVIDENCE.md](EVIDENCE.md).
 
 ## Requirements
 
-Claude Code, and Git. The review step uses Claude Code's code-review skill when it is available.
+Claude Code. Git, unless you install from the ZIP download. The review step uses Claude Code's code-review skill when
+it is available.
 
-## Register it (once)
+## Install and register it (once)
 
-Make a link from your Claude Code skills folder to the `guided_coding/` folder. The commands below are for bash or
-zsh; if your shell is csh or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything,
-and they stop on anything unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
+Put the repository somewhere, then make a link from your Claude Code skills folder to its `guided_coding/` folder.
+The commands below are for bash or zsh, and are complete: copy a whole block, with no editing. If your shell is csh
+or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything, and they stop on anything
+unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
 
-In a PHENIX installation, from the folder that contains `modules` and `build`, clone the repository if it is not
+**Most people: in your home folder, with Git.** This puts GuidedCoding in `~/guided_coding` and registers it:
+
+```
+sh <<'END'
+SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+DIR="$HOME/guided_coding"
+if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
+[ -e "$DIR" ] || git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
+[ -f "$DIR/guided_coding/SKILL.md" ] || { echo "Not found: $DIR/guided_coding/SKILL.md; nothing registered."; exit 1; }
+mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc"
+END
+```
+
+**Without Git: from the ZIP download.** Download `guided_coding.zip` into your Downloads folder, then run this. It
+unpacks the ZIP into `~/guided_coding` and registers it:
+
+```
+sh <<'END'
+SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+DIR="$HOME/guided_coding"
+ZIP="$HOME/Downloads/guided_coding.zip"
+if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
+[ -e "$DIR" ] && { echo "$DIR already exists; nothing changed."; exit 1; }
+[ -f "$ZIP" ] || { echo "Not found: $ZIP. Download it first."; exit 1; }
+TMP="$(mktemp -d)" && unzip -q "$ZIP" -d "$TMP" || exit 1
+set -- "$TMP"/guided_coding-*
+[ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents in $TMP; nothing changed."; exit 1; }
+mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc"
+END
+```
+
+To update an installation made with Git, run `git pull` in its folder. A ZIP installation has no Git history: to
+update it, rename `~/guided_coding` and its link `~/.claude/skills/gc`, download the new ZIP and run the block again.
+The `git` commands further down this page are for installations made with Git.
+
+**In a PHENIX installation:** from the folder that contains `modules` and `build`, clone the repository if it is not
 there yet, then register:
 
 ```
@@ -43,9 +81,8 @@ mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc"
 END
 ```
 
-Elsewhere, clone the repository anywhere, and run the same block with `NEW` set to its `guided_coding/` folder. Then
-start a new Claude Code conversation and type `/gc`. It should introduce itself. Optionally, run `/gc setup` once per
-project to save its build and test commands in `.claude/GC_NOTES.md`.
+**Then** start a new Claude Code conversation and type `/gc`. It should introduce itself. Optionally, run `/gc setup`
+once per project to save its build and test commands in `.claude/GC_NOTES.md`.
 
 ## If you used the earlier GuidedCoding kit (revision 21 or older)
 
