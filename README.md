@@ -55,7 +55,7 @@ DIR="$HOME/guided_coding"
 ZIP="$HOME/Downloads/guided_coding.zip"
 if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
 [ -e "$DIR" ] && { echo "$DIR already exists; nothing changed."; exit 1; }
-[ -f "$ZIP" ] || { echo "Not found: $ZIP. Download it first."; exit 1; }
+[ -f "$ZIP" ] || { echo "Not found: $ZIP. Download it first. If it was saved under another name, such as 'guided_coding (1).zip', rename it to guided_coding.zip. If Safari unpacked it, turn off Settings > General > Open safe files after downloading, and download it again."; exit 1; }
 TMP="$(mktemp -d)" && unzip -q "$ZIP" -d "$TMP" || exit 1
 set -- "$TMP"/guided_coding-*
 [ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents in $TMP; nothing changed."; exit 1; }
@@ -64,8 +64,10 @@ END
 ```
 
 To update an installation made with Git, run `git pull` in its folder. A ZIP installation has no Git history: to
-update it, rename `~/guided_coding` and its link `~/.claude/skills/gc`, download the new ZIP and run the block again.
-The `git` commands further down this page are for installations made with Git.
+update it, remove the link `~/.claude/skills/gc` (it is only a link; removing it deletes nothing else), rename
+`~/guided_coding` to keep it as a backup, then download the new ZIP and run the block again. Keep any backup outside
+the skills folder, so that only one GuidedCoding registration remains: two skills named `gc` conflict. The `git`
+commands further down this page are for installations made with Git.
 
 **In a PHENIX installation:** from the folder that contains `modules` and `build`, clone the repository if it is not
 there yet, then register:
