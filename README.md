@@ -12,23 +12,23 @@ your attention:
 The skill is the [`guided_coding/`](guided_coding) folder. It is a set of instructions for Claude, with no code to
 install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
 
-## What the evidence says
-
-In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut missed
-program errors per job from 0.81 to 0.47. GuidedCoding always includes a review pass (Claude Code's code-review
-skill, the review the study measured, when it is available; otherwise Claude reviews the change itself and says so)
-and, where feasible, a test that proves the fix, with further checks when needed. GuidedCoding as now written has not
-itself been measured; it is being evaluated in real use. More in [EVIDENCE.md](EVIDENCE.md).
-
 ## Requirements
 
-Claude Code. Git, unless you install from the ZIP download. The review step uses Claude Code's code-review skill when
-it is available.
+- **Claude Code.** If you do not have it yet, follow
+  [Anthropic's Claude Code quickstart](https://code.claude.com/docs/en/quickstart) first.
+- **Git,** unless you install from the ZIP download.
+- **macOS or Linux.** GuidedCoding has been tested on macOS; it should work on Linux, and has not been tested on
+  Windows.
+
+The review step uses Claude Code's code-review skill when it is available. To let Claude Code install GuidedCoding
+with you instead of running the commands yourself, see the website's
+[Quick Start](https://www.thomasterwilliger.org/guided_coding/quick-start.html).
 
 ## Install and register it (once)
 
 Put the repository somewhere, then make a link from your Claude Code skills folder to its `guided_coding/` folder.
-The commands below are for bash or zsh, and are complete: copy a whole block, with no editing. If your shell is csh
+Open Terminal (on a Mac) or a terminal window (on Linux), paste a whole block, and press Return. The blocks are
+complete: copy each one whole, with no editing. They are for bash or zsh, the usual shells. If your shell is csh
 or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything, and they stop on anything
 unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
 
@@ -45,7 +45,8 @@ mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/
 END
 ```
 
-**Without Git: from the ZIP download.** Download `guided_coding.zip` into your Downloads folder, then run this. It
+**Without Git: from the ZIP download.** Download
+[`guided_coding.zip`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip) into your Downloads folder, then run this. It
 unpacks the ZIP into `~/guided_coding` and registers it:
 
 ```
@@ -83,8 +84,17 @@ mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc"
 END
 ```
 
-**Then** start a new Claude Code conversation and type `/gc`. It should introduce itself. Optionally, run `/gc setup`
-once per project to save its build and test commands in `.claude/GC_NOTES.md`.
+**Then** start a new Claude Code conversation in the folder of the project you want to change, and type `/gc`. It
+should introduce itself. After that, type `/gc` followed by what you want done. Installing is once per computer;
+optionally, run `/gc setup` once per project to save its build and test commands in `.claude/GC_NOTES.md`.
+
+## What the evidence says
+
+In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut missed
+program errors per job from 0.81 to 0.47. GuidedCoding always includes a review pass (Claude Code's code-review
+skill, the review the study measured, when it is available; otherwise Claude reviews the change itself and says so)
+and, where feasible, a test that proves the fix, with further checks when needed. GuidedCoding as now written has not
+itself been measured; it is being evaluated in real use. More in [EVIDENCE.md](EVIDENCE.md).
 
 ## If you used the earlier GuidedCoding kit (revision 21 or older)
 
@@ -102,9 +112,9 @@ What you gain, and what you lose:
 - **Your link.** If your link is `~/.claude/skills/guided_coding` and points to `modules/guided_coding/guided_coding`,
   updating the repository (`git pull`) is enough. The link keeps working and now gives the new `/gc`.
 - **A link into cctbx_project.** If your link points to `cctbx_project/libtbx/guided_coding` (revision 20 or older),
-  first clone as in "Register it", then run this from the folder that contains `modules` (in bash or zsh). It
-  replaces only a link that points to the cctbx_project copy, creates the new link before removing the old one, and
-  stops on anything else:
+  first clone as in "In a PHENIX installation" under "Install and register it (once)", then run this from the folder
+  that contains `modules` (in bash or zsh). It replaces only a link that points to the cctbx_project copy, creates
+  the new link before removing the old one, and stops on anything else:
 
   ```
   sh <<'END'
