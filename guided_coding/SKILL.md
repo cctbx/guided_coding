@@ -144,6 +144,8 @@ possible, and that the result can be trusted.
 
   Leave out keys, tokens and user data, and name anything you removed. The developer pastes the file into the
   outside reviewer the notes name (or another AI assistant) and pastes the reply back.
+- **An outside review on request.** The developer may ask for an outside review on any job, even when no trigger
+  applies. Write the same file; the review is then handled as for the triggers.
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
 - **When the output or the outside review comes back,** treat each problem or finding as in §2, and update the
   report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
