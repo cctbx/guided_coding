@@ -126,7 +126,8 @@ optionally, run `/gc setup` once per project to save its build and test commands
 ## What the evidence says
 
 In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut missed
-program errors per job from 0.81 to 0.47. On 18 harder jobs (selected, not a random sample), an outside review by
+program errors per job from 0.81 to 0.47. GuidedCoding always includes that review pass, which is the main reason to
+expect it to do better than plain Claude Code; it has not been shown to do better than Claude Code with one review. On 18 harder jobs (selected, not a random sample), an outside review by
 another AI assistant removed further major errors when added to GuidedCoding, narrowly. Version 1.4 keeps those two
 steps (the outside review for hard or consequential changes) and a test that proves the fix; it does not include a
 second review pass, keeps the independent reviewer optional, and narrows a strict scope rule that probably cost errors.
