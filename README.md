@@ -1,5 +1,9 @@
 # Guided Coding
 
+> **Retired (2026-10-23).** This branch keeps the earlier GuidedCoding kit for reference only. The current
+> GuidedCoding is on the `master` branch of this repository: https://github.com/cctbx/guided_coding. Its README
+> says how to move to it.
+
 Guided Coding is a Claude Code skill (`/guided_coding`, short name `/gc`) for
 making careful, reviewed changes to a project: a short plan, a tested change
 with its full diff for your decision, and publication as a separate choice.
