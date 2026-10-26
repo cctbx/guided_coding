@@ -174,10 +174,17 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
   commit. Follow the commit rules in the notes and team instructions.
 - **Push** only when the developer asks, and only where the notes and team instructions allow an agent to push.
 - **Steps the developer runs.** Where the notes or team instructions leave a commit or a push to the developer, give
-  the exact commands, each in its own block, in the order to run them: `git add` naming exactly this job's files,
-  `git commit -m` with the proposed message, then `git pull --rebase` and `git push`. Say which folder to run them
-  in. Ask the developer to say when they are done, then check that the commit is on the remote; if the push was
-  refused (for example because others pushed first), give the commands to update and push again.
+  the exact commands for the steps left to them, each in its own block, after naming what is open (below), and say
+  which folder to run them in:
+  1. to commit: `git add` naming exactly this job's files, then `git commit -m` with the proposed message;
+  2. to update, if the branch has a remote: `git pull --rebase` (or the update command the notes name). Ask the
+     developer to run it and report its output, and stop there. If it brought in new commits, check what changed and
+     rerun the affected checks before going on (as in "Update before pushing"). If it stopped on a conflict, give
+     `git rebase --abort`, which returns the checkout to where it was, and the options;
+  3. to push: `git push`, only when the update is done and the checks still hold.
+
+  After the push, fetch and check that the local branch is not ahead of its remote. If the push was refused, go back
+  to step 2.
 - **Name what is open first.** Do not proceed while any of the following holds, unless the developer explicitly
   accepts the limitation:
   - a live call, platform check or outside review is pending;

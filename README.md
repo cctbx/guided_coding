@@ -39,29 +39,38 @@ unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+VERSION=1.4
 DIR="$HOME/guided_coding"
 for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
 if [ -e "$DIR" ]; then
-  case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in *cctbx/guided_coding|*cctbx/guided_coding.git) ;; *) echo "$DIR exists but is not a clone of cctbx/guided_coding; nothing changed."; exit 1;; esac
+  case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) ;; *) echo "$DIR exists but is not a clone of https://github.com/cctbx/guided_coding; nothing changed."; exit 1;; esac
   [ "$(git -C "$DIR" rev-parse --abbrev-ref HEAD)" = master ] || { echo "$DIR is not on the master branch; nothing changed."; exit 1; }
   git -C "$DIR" pull --ff-only || { echo "Could not update $DIR; nothing registered."; exit 1; }
 else
   git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
 fi
-grep -q '^# GuidedCoding (version' "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not the current GuidedCoding (it may be the earlier kit); nothing registered."; exit 1; }
+grep -qx "# GuidedCoding (version $VERSION)" "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; exit 1; }
 mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md"
 END
 ```
 
 **Without Git: from the ZIP download.** Download
 [`guided_coding.zip`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip) into your Downloads folder.
-To check it, compare the output of `shasum -a 256 ~/Downloads/guided_coding.zip` with the published
-[`guided_coding.zip.sha256`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256). Then run this.
+To check it against the published
+[`guided_coding.zip.sha256`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256), run this; it
+should print `guided_coding.zip: OK`:
+
+```
+(cd ~/Downloads && curl -fsS https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256 | shasum -a 256 -c)
+```
+
+Then run this.
 It unpacks the ZIP into `~/guided_coding` and registers it:
 
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+VERSION=1.4
 DIR="$HOME/guided_coding"
 ZIP="$HOME/Downloads/guided_coding.zip"
 for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
@@ -69,8 +78,8 @@ for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; the
 [ -f "$ZIP" ] || { echo "Not found: $ZIP. Download it first. If it was saved under another name, such as 'guided_coding (1).zip', rename it to guided_coding.zip. If Safari unpacked it, turn off Settings > General > Open safe files after downloading, and download it again."; exit 1; }
 TMP="$(mktemp -d)" && unzip -q "$ZIP" -d "$TMP" || exit 1
 set -- "$TMP"/guided_coding-*
-[ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents in $TMP; nothing changed."; exit 1; }
-grep -q '^# GuidedCoding (version' "$1/guided_coding/SKILL.md" 2>/dev/null || { echo "the ZIP's guided_coding/SKILL.md is not the current GuidedCoding (it may be the earlier kit); nothing registered."; exit 1; }
+[ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents; nothing changed."; rm -rf "$TMP"; exit 1; }
+grep -qx "# GuidedCoding (version $VERSION)" "$1/guided_coding/SKILL.md" 2>/dev/null || { echo "the ZIP's guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; rm -rf "$TMP"; exit 1; }
 mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md"
 END
 ```
@@ -82,18 +91,21 @@ there yet, then register:
 git clone https://github.com/cctbx/guided_coding.git modules/guided_coding
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+VERSION=1.4
 NEW="$PWD/modules/guided_coding/guided_coding"
 [ -f "$NEW/SKILL.md" ] || { echo "Not found: $NEW/SKILL.md. Run this from the folder that contains modules."; exit 1; }
 for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
-grep -q '^# GuidedCoding (version' "$NEW/SKILL.md" 2>/dev/null || { echo "$NEW/SKILL.md is not the current GuidedCoding (it may be the earlier kit); nothing registered."; exit 1; }
+grep -qx "# GuidedCoding (version $VERSION)" "$NEW/SKILL.md" 2>/dev/null || { echo "$NEW/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; exit 1; }
 mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$NEW/SKILL.md"
 END
 ```
 
-Each block ends by showing the link and the version line of the skill it registered, such as
-`# GuidedCoding (version 1.4)`.
+Each block ends by showing the link and the version line of the skill it registered,
+`# GuidedCoding (version 1.4)`. The blocks register only that version (`VERSION=1.4` in each block).
 
-**Update.** For an installation made with Git, run `git pull` in its folder (`~/guided_coding`, or
+### Update
+
+For an installation made with Git, run `git pull` in its folder (`~/guided_coding`, or
 `modules/guided_coding` in PHENIX). A ZIP installation has no Git history. To update it:
 1. remove the link `gc` in your Claude Code skills folder (`$CLAUDE_CONFIG_DIR/skills` if you set
    `CLAUDE_CONFIG_DIR`, otherwise `~/.claude/skills`); it is only a link, and removing it deletes nothing else;
@@ -101,7 +113,9 @@ Each block ends by showing the link and the version line of the skill it registe
    (two skills named `gc` conflict);
 3. download the new ZIP and run the ZIP block again.
 
-**Uninstall.** Remove the link `gc` from your Claude Code skills folder (as in Update, step 1). You may then delete
+### Uninstall
+
+Remove the link `gc` from your Claude Code skills folder (as in Update, step 1). You may then delete
 the `~/guided_coding` folder (or `modules/guided_coding` in PHENIX). Notes that `/gc setup` saved in a project
 (`.claude/GC_NOTES.md`) are ordinary files; delete them if you no longer want them.
 
@@ -143,16 +157,18 @@ What you gain, and what you lose:
   ```
   sh <<'END'
   SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+VERSION=1.4
   OLD="$SKILLS/guided_coding"
   NEW="$PWD/modules/guided_coding/guided_coding"
   [ -f "$NEW/SKILL.md" ] || { echo "Not found: $NEW/SKILL.md. Clone first, and run this from the folder that contains modules."; exit 1; }
+  grep -qx "# GuidedCoding (version $VERSION)" "$NEW/SKILL.md" || { echo "$NEW/SKILL.md is not GuidedCoding $VERSION; update the clone (git pull) first; nothing changed."; exit 1; }
   [ -L "$OLD" ] || { echo "$OLD is not a link (or does not exist); nothing changed."; exit 1; }
   case "$(readlink "$OLD")" in
     */cctbx_project/libtbx/guided_coding|*/cctbx_project/libtbx/guided_coding/) ;;
     *) echo "$OLD points to $(readlink "$OLD"), not the cctbx_project copy; nothing changed."; exit 1;;
   esac
   if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed."; exit 1; fi
-  ln -s "$NEW" "$SKILLS/gc" && rm "$OLD" && ls -l "$SKILLS"
+  ln -s "$NEW" "$SKILLS/gc" && rm "$OLD" && ls -l "$SKILLS" && grep -m1 '^# GuidedCoding' "$NEW/SKILL.md"
   END
   ```
 - **Two links.** Keep only one link to GuidedCoding. Two skills both named `gc` conflict.

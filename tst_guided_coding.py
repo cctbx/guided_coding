@@ -74,6 +74,11 @@ def run():
     for retired in ("/lean", "LEAN_NOTES.md is the", "Lean GuidedCoding"):
       if retired in text:
         failures.append("%s: retired name %r" % (name, retired))
+  # The README's install blocks register only this version (VERSION=... in each block).
+  readme = open(os.path.join(os.path.dirname(SKILL_DIR), "README.md")).read()
+  versions = re.findall(r"^\s*VERSION=(\S+)$", readme, re.M)
+  if len(versions) != 4 or set(versions) != {VERSION}:
+    failures.append("README.md: install blocks give VERSION=%s, expected %s in all four" % (versions, VERSION))
   # Version 1.4: six triggers, H among them, and H asks for the outside review (§3).
   skill = texts["SKILL.md"]
   if "The six triggers" not in skill:
