@@ -2,7 +2,7 @@
 
 Use this step only when the developer has agreed to it. It takes about three times as long as an ordinary review
 pass, and in the study it was not clearly better than a second ordinary review; use it when a second reader would
-help (SKILL.md §5). Version 1.3.
+help (SKILL.md §5). Version 1.4.
 
 1. **Criteria.** From the task text alone, not from your change, write the acceptance criteria in
    `<scratch folder>/review/CRITERIA.txt`.
@@ -47,7 +47,8 @@ only the diff: <named functions/files and callers>.
 Look for, and report each as a finding with evidence:
 1. Correctness: does the change implement the criterion, and only that? Include the cases the
    tests do not cover: <domain cases the change must handle, named for this code>.
-2. Any change of behaviour outside the approved scope (must be none). Name it for this code:
+2. Any change of behaviour beyond the approved scope, other than defect fixes the scope rule allows (SKILL.md §1),
+   which the report must name. Name it for this code:
    <paths and callers that must keep the old behaviour>. Is any caller relying on the old
    behaviour?
 3. Does each new test test the RIGHT claim? Would it fail on the base for the stated reason?

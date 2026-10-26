@@ -1,4 +1,4 @@
-# GuidedCoding batch (`/gc batch`, version 1.3)
+# GuidedCoding batch (`/gc batch`, version 1.4)
 
 A batch is a **supervised sequence of ordinary `/gc` jobs**, run one at a time while the developer stays reachable.
 Say these limits in one line when the batch starts:

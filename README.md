@@ -4,7 +4,8 @@ GuidedCoding is a Claude Code skill, `/gc`, for making a bug fix or a bounded ch
 your attention:
 - a test that proves the fix;
 - one review pass;
-- extra checks only when a change needs them (a live call, a run on another platform, an outside review);
+- an outside review by another AI assistant for hard or consequential changes, and on request;
+- extra checks only when a change needs them (a live call, a run on another platform);
 - a short report.
 
 `/gc batch` runs a supervised list of such jobs one at a time.
@@ -91,11 +92,12 @@ optionally, run `/gc setup` once per project to save its build and test commands
 ## What the evidence says
 
 In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut missed
-program errors per job from 0.81 to 0.47. GuidedCoding always includes a review pass (Claude Code's code-review
-skill, the review the study measured, when it is available; otherwise Claude reviews the change itself and says so)
-and, where feasible, a test that proves the fix, with further checks when needed. GuidedCoding as now written has not
-itself been measured; it is being evaluated in real use. [EVIDENCE.md](EVIDENCE.md) goes through the main
-parts of `/gc` and what the evidence says about each.
+program errors per job from 0.81 to 0.47. On 18 harder jobs (selected, not a random sample), an outside review by
+another AI assistant removed further major errors when added to GuidedCoding, narrowly. Version 1.4 keeps those two
+steps (the outside review for hard or consequential changes) and a test that proves the fix; it does not include a
+second review pass, keeps the independent reviewer optional, and narrows a strict scope rule that probably cost errors.
+GuidedCoding 1.4 as a whole has not itself been measured; it was checked in a small trial and is being evaluated in
+real use. [EVIDENCE.md](EVIDENCE.md) goes through each part of `/gc` and what the evidence says about it.
 
 ## If you used the earlier GuidedCoding kit (revision 21 or older)
 

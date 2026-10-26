@@ -4,7 +4,7 @@ description: GuidedCoding for one bounded bug fix or change, or a supervised bat
 disable-model-invocation: true
 ---
 
-# GuidedCoding (version 1.3)
+# GuidedCoding (version 1.4)
 
 The developer's request is: $ARGUMENTS
 
@@ -15,7 +15,8 @@ possible, and that the result can be trusted.
 
 - **What was asked.**
   - **`/gc` with nothing after it:** in a few lines, say what GuidedCoding does: one bounded change, a proving test,
-    one review pass, extra checks only when triggered, and a short report. Mention `/gc setup` and `/gc batch`, then
+    one review pass, an outside review for hard or consequential changes, extra checks only when triggered, and a
+    short report. Mention `/gc setup` and `/gc batch`, then
     ask for the task.
   - **`/gc setup`:** read `${CLAUDE_SKILL_DIR}/SETUP.md` and follow it. Do nothing else.
   - **`/gc batch ...`:** read `${CLAUDE_SKILL_DIR}/BATCH.md` and follow it.
@@ -62,7 +63,7 @@ possible, and that the result can be trusted.
     4. touch a shared installation only on the developer's explicit go.
 - **Large jobs.** If the task bundles separable changes, propose splitting it, and running the parts with
   `/gc batch`.
-- **The five triggers.** L, P, R and D are checked at the start; Q is checked after the review in §2. Each adds a
+- **The six triggers.** L, P, R, D and H are checked at the start; Q is checked after the review in §2. Each adds a
   step in §3.
   - **L. Live service.** Whether the fix works can only be confirmed against a live outside service or product: an
     LLM or provider API, a model name or default, a network service, or a host application.
@@ -72,14 +73,24 @@ possible, and that the result can be trusted.
     shared installation. An ordinary push is handled in §4.
   - **D. Data or credentials.** The change writes, moves or deletes existing user files, or handles credentials.
     Writing new output files is not enough.
+  - **H. Hard change.** Whether the change is correct turns on conditions the tests may not reach. Any of:
+    - the code decides whether something is safe, valid, consistent, complete or failed (a check, guard, validator,
+      or the detection of an error or a finished job);
+    - processes, threads, polling, timeouts, cleanup, or what happens when a step fails part-way;
+    - defaults or compatibility across versions, models, providers or platforms;
+    - shared code with several callers or modes, where the change alters behaviour beyond the reported path.
+
+    A routine bounded fix (a clear defect on one path, with a convincing proving test) is not H.
   - **Q. Open correctness question.** After §2, an important question about whether the change is correct remains
     unresolved, or there is no convincing test of its essential behaviour. For P, the platform commands are the
     pending proof; Q applies only if the mechanism itself is still in doubt.
-- **When unsure.** If you are unsure whether L or P applies, treat it as applying. R, D and Q apply only as worded.
+- **When unsure.** If you are unsure whether L, P or H applies, treat it as applying. R, D and Q apply only as worded.
 - **Scope rule.**
-  - Proceed with the routine implementation, tests and documentation needed to accomplish the requested task.
-  - Ask before changing intended behaviour, public interfaces, defaults, file formats, or the agreed project scope
-    (including work in another repository). Changes the task explicitly requests need no question.
+  - Proceed with the implementation, tests and documentation needed to accomplish the requested task.
+  - Fix real defects you or a review find in the code this job changes, and in the paths it calls, when the fix stays
+    within that code: crashes, wrong results, unhandled failures, missing edge cases. These need no question.
+  - Ask before changing public interfaces, defaults, file formats, intended behaviour that callers rely on, or the
+    agreed project scope (including work in another repository). Changes the task explicitly requests need no question.
   - Ask the same way if the task leaves the intended behaviour open.
   - To ask, give the options, a recommendation and one question the developer can answer in a word.
 
@@ -116,10 +127,9 @@ possible, and that the result can be trusted.
   - **If the code-review skill is not available,** review the diff yourself once: correctness, unintended behaviour
     changes, and whether the tests prove the fix. The report says that this fallback was used. It is not the review
     the method was built on.
-  - Check each fix the review applied. Revert at once any fix that is wrong, or that changes behaviour beyond the
-    task (the scope rule), even a small one or one you think is an improvement. A fix changes behaviour beyond the task
-    if it changes what the code does in any case the task did not mention: error handling, exit status, failure
-    modes, defaults, outputs. Raise it as a decision instead of keeping it, and say what you reverted.
+  - Check each fix the review applied. Keep a fix that corrects a real defect within the scope rule (§1). Revert a fix
+    that is wrong, or that changes a public interface, a default, a file format or behaviour callers rely on (§1);
+    raise it as a decision instead, and say what you reverted.
   - For each finding it did not fix: fix it; or, if it is not a real problem, drop it with a one-line reason; or, if
     it needs the developer's decision, keep it for the report.
   - Rerun the tests after any change.
@@ -133,20 +143,24 @@ possible, and that the result can be trusted.
   - A live failure outranks every offline test.
   - If you cannot make the calls, give the exact commands.
 - **P (other platform): give the exact commands** to run on that platform.
-- **R, D or Q, and consequential work: an outside review.** Write one file, `OUTSIDE_REVIEW.md`, in the scratch folder,
-  containing:
+- **H, R, D or Q, and consequential work: an outside review.** Write one file, `OUTSIDE_REVIEW.md`, in the scratch
+  folder, containing:
   - the task text;
   - the full diff;
   - the new tests and their output on the old and new code;
-  - the open question, for Q;
+  - for H, one line naming the conditions that make the change hard; for Q, the open question;
   - this request: "Review this change for correctness, unintended behaviour changes, and whether the tests prove the
     fix. List findings, most serious first."
 
   Leave out keys, tokens and user data, and name anything you removed. The developer pastes the file into the
   outside reviewer the notes name (or another AI assistant) and pastes the reply back.
-- **An outside review on request.** The developer may ask for an outside review on any job, even when no trigger
-  applies. Write the same file; the review is then handled as for the triggers.
+- **An outside review on request.** For any other job, the outside review is optional: the report offers it in one
+  line, and the developer may ask for it at any time. Write the same file; the review is then handled as for the
+  triggers.
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
+- **Finish before you report.** If you start a long test or build, wait for it to finish (or stop it) before writing
+  any outside-review file and the final report. Leave nothing this job started running in the background. The final report is your
+  last message.
 - **When the output or the outside review comes back,** treat each problem or finding as in §2, and update the
   report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
   accepting the uncertainty.
@@ -201,11 +215,12 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
   - the existing tests;
   - the review: findings reported, fixed automatically, fixed by you, dropped (with reasons), and kept for the
     developer, and whether the fallback was used;
-  - live calls, or outside review (done, pending, or skipped), if any.
+  - live calls, if any;
+  - the outside review: done, pending, or skipped; or, where no trigger asked for it, "available on request".
 - **Not checked:** anything that was not, or could not be, run or confirmed: platforms, live behaviour, the GUI, long
   runs.
 - **Changes to behaviour, interfaces, defaults, formats or scope that the task did not request:** each one, with the
-  developer's answer. Or "none".
+  developer's answer; or, for a defect fixed under the scope rule, one line on what it changes and why. Or "none".
 - **Conflicts between instructions:** any conflict between the notes and team instructions, and which rule you
   followed. Or "none".
 - **Decisions for you:** at most a few. Each gets a line of background, the options, your recommendation, and the
@@ -225,4 +240,4 @@ If it is not, list it under Not checked.
 When the job ends, follow `${CLAUDE_SKILL_DIR}/LOG.md` to add one line to the log file the notes name.
 
 ---
-Version 1.3, 2026-10-23.
+Version 1.4, 2026-10-26.

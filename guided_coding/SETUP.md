@@ -1,4 +1,4 @@
-# GuidedCoding setup (`/gc setup`, version 1.3)
+# GuidedCoding setup (`/gc setup`, version 1.4)
 
 Setup saves a short notes file, `.claude/GC_NOTES.md`, that `/gc` reads at the start of every job. It changes
 nothing else, runs no build or test, connects to nothing, and does not start a coding task. Expect it to take a few

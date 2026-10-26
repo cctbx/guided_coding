@@ -13,7 +13,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL_DIR = os.path.join(HERE, "guided_coding")
 FILES = ["SKILL.md", "BATCH.md", "SETUP.md", "REVIEWER.md", "LOG.md"]
-VERSION = "1.3"
+VERSION = "1.4"
 
 
 def read(name):
@@ -74,6 +74,15 @@ def run():
     for retired in ("/lean", "LEAN_NOTES.md is the", "Lean GuidedCoding"):
       if retired in text:
         failures.append("%s: retired name %r" % (name, retired))
+  # Version 1.4: six triggers, H among them, and H asks for the outside review (§3).
+  skill = texts["SKILL.md"]
+  if "The six triggers" not in skill:
+    failures.append("SKILL.md: 'The six triggers' not found")
+  for letter in "LPRDHQ":
+    if not re.search(r"\*\*%s\. " % letter, skill):
+      failures.append("SKILL.md: trigger %s is not defined" % letter)
+  if not re.search(r"\*\*H, R, D or Q, and consequential work: an outside review", skill):
+    failures.append("SKILL.md: §3 does not give the outside review for H")
   return failures
 
 
