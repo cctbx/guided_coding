@@ -8,7 +8,8 @@ minutes, once per project.
 
 - **The project** is the folder this session was started in, unless the developer names another.
 - **Notes that already exist.** If `.claude/GC_NOTES.md` (or the older `.claude/LEAN_NOTES.md`) exists there or in a
-  parent folder, show it and ask what to change, and update that file where it is. Do not start again from scratch, and do not make a second copy.
+  parent folder, show it and ask what to change, and update that file where it is. Do not start again from scratch,
+  and do not make a second copy.
 
 ## 2. Look before asking
 

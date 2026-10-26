@@ -20,6 +20,10 @@ sample), unless stated otherwise; the study is described below.
 | **The independent reviewer (`REVIEWER.md`)** | Not clearly better than a second ordinary review, at about three times the time | Optional, on request |
 | **The strict scope rule** (revert every review fix beyond the literal task, ask first) | Probably cost errors: in round 6, fixes the review found were undone and left as questions, and `/gc` left more major errors than plain + review (0.97 against 0.79). Estimated from those cases, not measured directly | Narrowed: real defects in the code the job changes are fixed without asking; `/gc` asks before changing public interfaces, defaults, file formats, behaviour callers rely on, or the project's scope, and when the task leaves the intended behaviour open |
 
+**Two scorings of the same arms.** Plain Claude Code with one review appears as 0.79 (round 6) and as 0.85 (before the
+outside review, round 6b); `/gc` 1.3 appears as 0.97 and 1.00. Round 6b's instruments found further errors that the
+earlier versions also had, which raised those figures. Each comparison uses figures from one scoring.
+
 **Kept for safety and clarity, not measured:** the short final report (what changed, what was checked, what is open);
 a real call to a live service where a fix depends on it; exact commands for another platform; an outside review for
 changes that touch existing user files or credentials; asking before any commit, push or installation; a plan, a

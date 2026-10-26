@@ -33,43 +33,47 @@ complete: copy each one whole, with no editing. They are for bash or zsh, the us
 or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything, and they stop on anything
 unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
 
-**Most people: in your home folder, with Git.** This puts GuidedCoding in `~/guided_coding` and registers it:
+**Most people: in your home folder, with Git.** This puts GuidedCoding in `~/guided_coding` and registers it. If
+`~/guided_coding` is already a clone of cctbx/guided_coding on `master`, it updates it with `git pull` instead:
 
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 DIR="$HOME/guided_coding"
-if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
-[ -e "$DIR" ] || git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
-[ -f "$DIR/guided_coding/SKILL.md" ] || { echo "Not found: $DIR/guided_coding/SKILL.md; nothing registered."; exit 1; }
-mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc"
+for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
+if [ -e "$DIR" ]; then
+  case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in *cctbx/guided_coding|*cctbx/guided_coding.git) ;; *) echo "$DIR exists but is not a clone of cctbx/guided_coding; nothing changed."; exit 1;; esac
+  [ "$(git -C "$DIR" rev-parse --abbrev-ref HEAD)" = master ] || { echo "$DIR is not on the master branch; nothing changed."; exit 1; }
+  git -C "$DIR" pull --ff-only || { echo "Could not update $DIR; nothing registered."; exit 1; }
+else
+  git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
+fi
+grep -q '^# GuidedCoding (version' "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not the current GuidedCoding (it may be the earlier kit); nothing registered."; exit 1; }
+mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md"
 END
 ```
 
 **Without Git: from the ZIP download.** Download
-[`guided_coding.zip`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip) into your Downloads folder, then run this. It
-unpacks the ZIP into `~/guided_coding` and registers it:
+[`guided_coding.zip`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip) into your Downloads folder.
+To check it, compare the output of `shasum -a 256 ~/Downloads/guided_coding.zip` with the published
+[`guided_coding.zip.sha256`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256). Then run this.
+It unpacks the ZIP into `~/guided_coding` and registers it:
 
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 DIR="$HOME/guided_coding"
 ZIP="$HOME/Downloads/guided_coding.zip"
-if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
-[ -e "$DIR" ] && { echo "$DIR already exists; nothing changed."; exit 1; }
+for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
+[ -e "$DIR" ] && { echo "$DIR already exists; nothing changed. To update a ZIP installation, see Update."; exit 1; }
 [ -f "$ZIP" ] || { echo "Not found: $ZIP. Download it first. If it was saved under another name, such as 'guided_coding (1).zip', rename it to guided_coding.zip. If Safari unpacked it, turn off Settings > General > Open safe files after downloading, and download it again."; exit 1; }
 TMP="$(mktemp -d)" && unzip -q "$ZIP" -d "$TMP" || exit 1
 set -- "$TMP"/guided_coding-*
 [ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents in $TMP; nothing changed."; exit 1; }
-mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc"
+grep -q '^# GuidedCoding (version' "$1/guided_coding/SKILL.md" 2>/dev/null || { echo "the ZIP's guided_coding/SKILL.md is not the current GuidedCoding (it may be the earlier kit); nothing registered."; exit 1; }
+mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md"
 END
 ```
-
-To update an installation made with Git, run `git pull` in its folder. A ZIP installation has no Git history: to
-update it, remove the link `~/.claude/skills/gc` (it is only a link; removing it deletes nothing else), rename
-`~/guided_coding` to keep it as a backup, then download the new ZIP and run the block again. Keep any backup outside
-the skills folder, so that only one GuidedCoding registration remains: two skills named `gc` conflict. The `git`
-commands further down this page are for installations made with Git.
 
 **In a PHENIX installation:** from the folder that contains `modules` and `build`, clone the repository if it is not
 there yet, then register:
@@ -80,10 +84,26 @@ sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 NEW="$PWD/modules/guided_coding/guided_coding"
 [ -f "$NEW/SKILL.md" ] || { echo "Not found: $NEW/SKILL.md. Run this from the folder that contains modules."; exit 1; }
-if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed:"; ls -l "$SKILLS/gc"; exit 1; fi
-mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc"
+for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
+grep -q '^# GuidedCoding (version' "$NEW/SKILL.md" 2>/dev/null || { echo "$NEW/SKILL.md is not the current GuidedCoding (it may be the earlier kit); nothing registered."; exit 1; }
+mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$NEW/SKILL.md"
 END
 ```
+
+Each block ends by showing the link and the version line of the skill it registered, such as
+`# GuidedCoding (version 1.4)`.
+
+**Update.** For an installation made with Git, run `git pull` in its folder (`~/guided_coding`, or
+`modules/guided_coding` in PHENIX). A ZIP installation has no Git history. To update it:
+1. remove the link `gc` in your Claude Code skills folder (`$CLAUDE_CONFIG_DIR/skills` if you set
+   `CLAUDE_CONFIG_DIR`, otherwise `~/.claude/skills`); it is only a link, and removing it deletes nothing else;
+2. rename `~/guided_coding` to keep it as a backup, outside the skills folder, so that only one registration remains
+   (two skills named `gc` conflict);
+3. download the new ZIP and run the ZIP block again.
+
+**Uninstall.** Remove the link `gc` from your Claude Code skills folder (as in Update, step 1). You may then delete
+the `~/guided_coding` folder (or `modules/guided_coding` in PHENIX). Notes that `/gc setup` saved in a project
+(`.claude/GC_NOTES.md`) are ordinary files; delete them if you no longer want them.
 
 **Then** start a new Claude Code conversation in the folder of the project you want to change, and type `/gc`. It
 should introduce itself. After that, type `/gc` followed by what you want done. Installing is once per computer;
@@ -115,8 +135,9 @@ What you gain, and what you lose:
 - **Your link.** If your link is `~/.claude/skills/guided_coding` and points to `modules/guided_coding/guided_coding`,
   updating the repository (`git pull`) is enough. The link keeps working and now gives the new `/gc`.
 - **A link into cctbx_project.** If your link points to `cctbx_project/libtbx/guided_coding` (revision 20 or older),
-  first clone as in "In a PHENIX installation" under "Install and register it (once)", then run this from the folder
-  that contains `modules` (in bash or zsh). It replaces only a link that points to the cctbx_project copy, creates
+  first run only the `git clone` line from "In a PHENIX installation" under "Install and register it (once)" (not
+  its register block, which stops while the old link exists), then run this from the folder that contains `modules`
+  (in bash or zsh). It replaces only a link that points to the cctbx_project copy, creates
   the new link before removing the old one, and stops on anything else:
 
   ```

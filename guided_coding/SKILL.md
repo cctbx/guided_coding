@@ -159,8 +159,8 @@ possible, and that the result can be trusted.
   triggers.
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
 - **Finish before you report.** If you start a long test or build, wait for it to finish (or stop it) before writing
-  any outside-review file and the final report. Leave nothing this job started running in the background. The final report is your
-  last message.
+  any outside-review file and the final report. Leave nothing this job started running in the background. The final
+  report is your last message.
 - **When the output or the outside review comes back,** treat each problem or finding as in §2, and update the
   report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
   accepting the uncertainty.
@@ -173,7 +173,11 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
 - **Commit** only when the developer asks, after showing the complete diff. Approving the content is not a request to
   commit. Follow the commit rules in the notes and team instructions.
 - **Push** only when the developer asks, and only where the notes and team instructions allow an agent to push.
-  Where they do not, give the developer the exact push command.
+- **Steps the developer runs.** Where the notes or team instructions leave a commit or a push to the developer, give
+  the exact commands, each in its own block, in the order to run them: `git add` naming exactly this job's files,
+  `git commit -m` with the proposed message, then `git pull --rebase` and `git push`. Say which folder to run them
+  in. Ask the developer to say when they are done, then check that the commit is on the remote; if the push was
+  refused (for example because others pushed first), give the commands to update and push again.
 - **Name what is open first.** Do not proceed while any of the following holds, unless the developer explicitly
   accepts the limitation:
   - a live call, platform check or outside review is pending;
