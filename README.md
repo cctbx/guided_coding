@@ -18,8 +18,7 @@ install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
 - **Claude Code.** If you do not have it yet, follow
   [Anthropic's Claude Code quickstart](https://code.claude.com/docs/en/quickstart) first.
 - **Git,** unless you install from the ZIP download.
-- **macOS or Linux.** GuidedCoding has been tested on macOS and tried on a Linux server; it has not been tested on
-  Windows.
+- **macOS or Linux.** GuidedCoding has been tested on macOS and Linux; it has not been tested on Windows.
 
 The review step uses Claude Code's code-review skill when it is available. To let Claude Code install GuidedCoding
 with you instead of running the commands yourself, see the website's
