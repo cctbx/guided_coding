@@ -78,7 +78,8 @@ Be conservative: undo only what can be undone without losing anyone's work, and 
 
 ## 5. uninstall
 
-Ask one plain question, naming the full path of the copy: "Uninstall GuidedCoding? This removes /gc from Claude Code
-and deletes its files in <full path of the copy>. Your project notes are kept." If the copy is inside a PHENIX
-installation, say so. If the developer agrees, run the Uninstall block from the README exactly as
-written, and report its output in plain words, including any folder it kept and why.
+Ask one plain question, naming the full path of the copy, in these words or close to them: "Uninstall GuidedCoding?
+This removes /gc and deletes <full path of the copy>. If you have changed or added anything in that folder, it is
+kept instead, and I'll tell you why. Your project notes are kept." Do not use the bare phrase "if it is unchanged".
+If the copy is inside a PHENIX installation, say so. If the developer agrees, run the Uninstall block from the
+README exactly as written, and report its output in plain words, including any folder it kept and why.
