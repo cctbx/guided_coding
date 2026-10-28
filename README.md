@@ -18,7 +18,7 @@ install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
 - **Claude Code.** If you do not have it yet, follow
   [Anthropic's Claude Code quickstart](https://code.claude.com/docs/en/quickstart) first.
 - **Git,** unless you install from the ZIP download.
-- **macOS or Linux.** GuidedCoding has been tested on macOS; it should work on Linux, and has not been tested on
+- **macOS or Linux.** GuidedCoding has been tested on macOS and tried on a Linux server; it has not been tested on
   Windows.
 
 The review step uses Claude Code's code-review skill when it is available. To let Claude Code install GuidedCoding
@@ -32,6 +32,9 @@ Open Terminal (on a Mac) or a terminal window (on Linux), paste a whole block, a
 complete: copy each one whole, with no editing. They are for bash or zsh, the usual shells. If your shell is csh
 or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything, and they stop on anything
 unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
+
+Most people should install GuidedCoding in their home folder. This works with any project, including PHENIX. If you
+develop PHENIX, you can instead install it in your PHENIX installation, next to your PHENIX source code.
 
 **Most people: in your home folder, with Git.** This puts GuidedCoding in `~/guided_coding` and registers it. If
 `~/guided_coding` is already a clone of cctbx/guided_coding on `master`, it updates it with `git pull` instead:
@@ -50,8 +53,42 @@ else
   git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
 fi
 grep -qx "# GuidedCoding (version $VERSION)" "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; exit 1; }
-mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md"
+mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
 END
+```
+
+**PHENIX developers (optional): in your PHENIX installation.** This puts GuidedCoding in the installation's
+`modules/guided_coding` and registers it; if that folder is already a clone of cctbx/guided_coding, it uses it as it
+is. The installation is the one `$PHENIX` names, or else the current folder, which must contain `modules`. Check
+which one first with `echo $PHENIX`; the block prints the folder it uses. The registration is for your whole
+account, so `/gc` uses this copy even when you work in another PHENIX installation. PHENIX's own update does not
+update it yet; run `git pull` in `modules/guided_coding`. For a shared installation, use the home-folder block unless
+you are allowed to change it.
+
+```
+sh <<'END'
+SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+VERSION=1.4
+ROOT="${PHENIX:-$PWD}"
+DIR="$ROOT/modules/guided_coding"
+echo "PHENIX installation: $ROOT"
+[ -d "$ROOT/modules" ] || { echo "No modules folder in $ROOT. Set up PHENIX in this shell, or cd to the installation folder that contains modules; nothing changed."; exit 1; }
+for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To move a home-folder installation here, see the line after this block. To update, see Update."; exit 1; fi; done
+if [ -e "$DIR" ]; then
+  case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) echo "Using the existing $DIR";; *) echo "$DIR exists but is not a clone of https://github.com/cctbx/guided_coding; nothing changed."; exit 1;; esac
+else
+  git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
+fi
+grep -qx "# GuidedCoding (version $VERSION)" "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version; run git pull there); nothing registered."; exit 1; }
+mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
+END
+```
+
+Already installed in your home folder? Remove that registration first. This removes only a link that points to
+`~/guided_coding`, and prints the command to put it back; `~/guided_coding` stays until you delete it:
+
+```
+L="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/gc"; T="$(readlink "$L")"; if [ "$T" = "$HOME/guided_coding/guided_coding" ]; then rm "$L" && echo "Removed $L. To put it back: ln -s $T $L"; else echo "$L points to ${T:-nothing}, not $HOME/guided_coding/guided_coding; nothing removed."; fi
 ```
 
 **Without Git: from the ZIP download.** Download
@@ -80,28 +117,13 @@ TMP="$(mktemp -d)" && unzip -q "$ZIP" -d "$TMP" || exit 1
 set -- "$TMP"/guided_coding-*
 [ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents; nothing changed."; rm -rf "$TMP"; exit 1; }
 grep -qx "# GuidedCoding (version $VERSION)" "$1/guided_coding/SKILL.md" 2>/dev/null || { echo "the ZIP's guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; rm -rf "$TMP"; exit 1; }
-mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md"
-END
-```
-
-**In a PHENIX installation:** from the folder that contains `modules` and `build`, clone the repository if it is not
-there yet, then register:
-
-```
-git clone https://github.com/cctbx/guided_coding.git modules/guided_coding
-sh <<'END'
-SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
-VERSION=1.4
-NEW="$PWD/modules/guided_coding/guided_coding"
-[ -f "$NEW/SKILL.md" ] || { echo "Not found: $NEW/SKILL.md. Run this from the folder that contains modules."; exit 1; }
-for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
-grep -qx "# GuidedCoding (version $VERSION)" "$NEW/SKILL.md" 2>/dev/null || { echo "$NEW/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; exit 1; }
-mkdir -p "$SKILLS" && ln -s "$NEW" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$NEW/SKILL.md"
+mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
 END
 ```
 
 Each block ends by showing the link and the version line of the skill it registered,
-`# GuidedCoding (version 1.4)`. The blocks register only that version (`VERSION=1.4` in each block).
+`# GuidedCoding (version 1.4)`, and what to do next. The blocks register only that version
+(`VERSION=1.4` in each block).
 
 ### Update
 
@@ -119,9 +141,11 @@ Remove the link `gc` from your Claude Code skills folder (as in Update, step 1).
 the `~/guided_coding` folder (or `modules/guided_coding` in PHENIX). Notes that `/gc setup` saved in a project
 (`.claude/GC_NOTES.md`) are ordinary files; delete them if you no longer want them.
 
-**Then** start a new Claude Code conversation in the folder of the project you want to change, and type `/gc`. It
-should introduce itself. After that, type `/gc` followed by what you want done. Installing is once per computer;
-optionally, run `/gc setup` once per project to save its build and test commands in `.claude/GC_NOTES.md`.
+**Then** start a new Claude Code conversation in the folder of a software project, and type `/gc` followed by a small
+task (or `/gc` alone for an introduction). If you plan to use GuidedCoding regularly on that project, run
+`/gc setup` there once (recommended): it saves the project's build and test commands, commit rules and other local
+defaults in `.claude/GC_NOTES.md`. Without it, `/gc` finds these from the project each time. Installing is once per
+computer.
 
 ## What the evidence says
 
@@ -150,8 +174,9 @@ What you gain, and what you lose:
 - **Your link.** If your link is `~/.claude/skills/guided_coding` and points to `modules/guided_coding/guided_coding`,
   updating the repository (`git pull`) is enough. The link keeps working and now gives the new `/gc`.
 - **A link into cctbx_project.** If your link points to `cctbx_project/libtbx/guided_coding` (revision 20 or older),
-  first run only the `git clone` line from "In a PHENIX installation" under "Install and register it (once)" (not
-  its register block, which stops while the old link exists), then run this from the folder that contains `modules`
+  first clone it from the folder that contains `modules`, with
+  `git clone https://github.com/cctbx/guided_coding.git modules/guided_coding` (not the PHENIX block, which
+  stops while the old link exists), then run this from the same folder
   (in bash or zsh). It replaces only a link that points to the cctbx_project copy, creates
   the new link before removing the old one, and stops on anything else:
 
@@ -169,7 +194,7 @@ VERSION=1.4
     *) echo "$OLD points to $(readlink "$OLD"), not the cctbx_project copy; nothing changed."; exit 1;;
   esac
   if [ -e "$SKILLS/gc" ] || [ -L "$SKILLS/gc" ]; then echo "$SKILLS/gc already exists; nothing changed."; exit 1; fi
-  ln -s "$NEW" "$SKILLS/gc" && rm "$OLD" && ls -l "$SKILLS" && grep -m1 '^# GuidedCoding' "$NEW/SKILL.md"
+  ln -s "$NEW" "$SKILLS/gc" && rm "$OLD" && ls -l "$SKILLS" && grep -m1 '^# GuidedCoding' "$NEW/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
   END
   ```
 - **Two links.** Keep only one link to GuidedCoding. Two skills both named `gc` conflict.
