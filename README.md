@@ -185,12 +185,11 @@ an installation made with Git, run `git pull` in its folder (`~/guided_coding`, 
 
 ### Uninstall
 
-Type `/gc uninstall` in Claude Code, or paste this block. It removes GuidedCoding from Claude Code and deletes its
-files, except a copy under a `modules` folder (`modules/guided_coding`), which may belong to a larger installation
-such as PHENIX and stays. It keeps the files, and says why, unless they are demonstrably unchanged: a clean clone with nothing of your
-own (no changes, ignored files, commits that are not on GitHub, other branches or stashes), or a ZIP copy whose files
-match its `RELEASE.sha256` exactly. Project notes that `/gc setup` saved (`.claude/GC_NOTES.md` in your
-projects) are kept.
+Type `/gc uninstall` in Claude Code, or paste this block. It removes GuidedCoding from Claude Code: it removes only
+the `gc` link, so `/gc` stops working, and deletes nothing. It then tells you where GuidedCoding's files are and
+whether they hold anything of yours (changes, other files, commits that are not on GitHub, other branches or
+stashes). A copy under a `modules` folder (`modules/guided_coding`) may belong to a larger installation such as
+PHENIX, and stays. Project notes that `/gc setup` saved (`.claude/GC_NOTES.md` in your projects) are kept.
 
 ```
 sh <<'END'
@@ -200,7 +199,7 @@ T="$(readlink "$L")"; case "$T" in /*) ;; *) T="$(dirname "$L")/$T";; esac
 COPY="$(dirname "$T")"
 [ "$(basename "$T")" = guided_coding ] || { echo "$L points to $T, not GuidedCoding; nothing changed."; exit 1; }
 if [ -e "$T" ]; then grep -q '^# GuidedCoding' "$T/SKILL.md" 2>/dev/null || { echo "$L points to $T, which is not GuidedCoding; nothing changed."; exit 1; }; fi
-rm "$L" || { echo "Could not remove $L; nothing changed."; exit 1; }
+unlink "$L" || { echo "Could not remove $L; nothing changed."; exit 1; }
 echo "Removed GuidedCoding from Claude Code; /gc stops working in new conversations."
 KEEP=""
 if [ ! -e "$T" ]; then KEEP="-"
@@ -229,12 +228,15 @@ else
     (cd "$COPY" && $SUM -c RELEASE.sha256 >/dev/null 2>&1) || KEEP="some of its files were changed"
   fi
 fi
-if [ -z "$KEEP" ]; then rm -rf "$COPY" && echo "Deleted its files in $COPY."
-elif [ "$KEEP" = phenix ]; then echo "Kept $COPY: it is under a modules folder, so it may belong to a larger installation such as PHENIX."
-elif [ "$KEEP" != "-" ]; then echo "Kept $COPY because $KEEP. Delete it yourself if you no longer need it."; fi
+if [ "$KEEP" = phenix ]; then echo "Its files stay in $COPY, which is part of a larger installation such as PHENIX."
+elif [ -z "$KEEP" ]; then echo "Its files are still in $COPY. They hold nothing of yours; delete that folder if you no longer need it."
+elif [ "$KEEP" != "-" ]; then echo "Its files are still in $COPY. Before deleting that folder, note that $KEEP."; fi
 echo "Project notes (.claude/GC_NOTES.md in your projects) are kept."
 END
 ```
+
+To delete GuidedCoding's files too, delete the folder it names: `rm -rf <that folder>`. Check it first if the
+block says it holds something of yours.
 
 ## What the evidence says
 

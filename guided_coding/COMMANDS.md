@@ -78,14 +78,16 @@ Be conservative: undo only what can be undone without losing anyone's work, and 
 
 ## 5. uninstall
 
-Ask one plain question, naming the full path of the copy, in these words: "Uninstall GuidedCoding? This removes /gc
-and deletes <full path of the copy>. If you have changed or added anything in that folder, it is kept instead, and
-I'll tell you why. Your project notes are kept." If the copy is under a `modules` folder (`modules/guided_coding`),
-it may belong to a larger installation such as PHENIX and is not deleted; ask instead: "Uninstall GuidedCoding? This
-removes /gc. Its folder <full path of the copy> is part of a larger installation (such as PHENIX) and stays. Your
-project notes are kept." Offer exactly two
-answers: "Yes, uninstall" and "No, keep it", with no other description. In the question and answers, say only what
-will happen to the developer's files; do not mention the README, the block, links or "unchanged".
+Ask one plain question, naming the full path of the copy, in these words: "Uninstall GuidedCoding? This removes /gc.
+Its files stay in <full path of the copy>; I'll give you the command to delete them if you want. Your project notes
+are kept." If the copy is under a `modules` folder (`modules/guided_coding`), ask instead: "Uninstall GuidedCoding?
+This removes /gc. Its folder <full path of the copy> is part of a larger installation (such as PHENIX) and stays.
+Your project notes are kept." Offer exactly two answers: "Yes, uninstall" and "No, keep it", with no other
+description. In the question and answers, say only what will happen; do not mention the README, the block or links.
 
-If the developer says yes, run the Uninstall block from the README exactly as written, and report its output in
-plain words, including any folder it kept and why.
+If the developer says yes:
+1. Run the Uninstall block from the README exactly as written. It removes /gc and deletes nothing.
+2. Report in plain words: /gc is removed, where the files are, and what the block said about them.
+3. Unless the copy is under a `modules` folder, give the command that deletes the folder, for the developer to run
+   if they want: `rm -rf '<full path of the copy>'`, in its own block, with a `cd` line first (SKILL.md §0). If the
+   block said the folder holds something of theirs, say so next to the command. Do not run it yourself.
