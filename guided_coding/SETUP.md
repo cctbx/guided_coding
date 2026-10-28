@@ -42,8 +42,9 @@ GC setup for <project folder>
                                                               (default: none; rely on the project's CI)
 5. Commit and push rules:
                          <the project's own: message rules, branch, how to push; or none>
-                                                              (found / default: summary line and short body, at
-                                                               most 55 words; no AI attribution; ask before a push)
+                                                              (found / default: commit only when asked, push only
+                                                               when asked; short summary line, brief body if
+                                                               needed; no AI attribution)
 6. Outside reviewer:     <which AI assistant you paste reviews into>
                                                               (default: "another AI assistant of your choice")
 7. Live calls:           <allowed with safe test inputs, or ask before each one; where the keys come from>
@@ -80,6 +81,15 @@ GC setup for <project folder>
   into the notes file found in §1, or else into a new `.claude/GC_NOTES.md` in the project folder.
 - **Keep it personal.** If a new file is inside a Git repository, add its path, relative to the repository root
   (`git rev-parse --show-prefix`), to the file that `git rev-parse --git-path info/exclude` names, so it is never
-  committed. Say that you did.
+  committed. Say that you did. Before updating an existing notes file, check whether Git tracks it
+  (`git ls-files --error-unmatch <file>`); do not put personal instructions into a tracked file without the
+  developer's approval.
+- **No AI attribution, reliably.** If the commit rules say no AI attribution, offer to add Claude Code's own setting
+  to the project's `.claude/settings.local.json`, keeping any settings already there and keeping the file out of
+  Git as above. Add it only if the developer agrees:
+
+  ```
+  "attribution": { "commit": "", "pr": "" }
+  ```
 - **Changing it later.** The developer can edit the file at any time, or run `/gc setup` again.
 - **Then stop.** Report the file's path, and say that `/gc <task>` is ready to use.
