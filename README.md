@@ -73,11 +73,40 @@ ROOT="${PHENIX:-$PWD}"
 DIR="$ROOT/modules/guided_coding"
 echo "PHENIX installation: $ROOT"
 [ -d "$ROOT/modules" ] || { echo "No modules folder in $ROOT. Set up PHENIX in this shell, or cd to the installation folder that contains modules; nothing changed."; exit 1; }
+for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then
+  case "$(readlink "$SKILLS/$L")" in */cctbx_project/libtbx/guided_coding|*/cctbx_project/libtbx/guided_coding/) echo "$SKILLS/$L is the earlier GuidedCoding kit; nothing changed. To move from it, use the move block below.";; *) echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To move a home-folder installation here, see the line after the move block. To update, see Update.";; esac
+  exit 1
+fi; done
+if [ -e "$DIR" ]; then
+  case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) echo "Using the existing $DIR";; *) echo "$DIR exists but is not a clone of https://github.com/cctbx/guided_coding; nothing changed."; exit 1;; esac
+else
+  git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
+fi
+grep -qx "# GuidedCoding (version $VERSION)" "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version; run git pull there); nothing registered."; exit 1; }
+mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" || { echo "Could not register GuidedCoding at $SKILLS/gc; nothing changed."; exit 1; }
+echo "Registered $SKILLS/gc -> $DIR/guided_coding (GuidedCoding $VERSION)."
+echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
+END
+```
+
+**Moving from the earlier kit** (a `gc` or `guided_coding` link into `cctbx_project/libtbx/guided_coding`)? Use this
+block instead. It does the same, and replaces only that registration with the new one (it removes the old link,
+which is why Claude Code asks you to approve an `rm`); if anything fails, it puts the old link back:
+
+```
+sh <<'END'
+SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
+VERSION=1.4
+ROOT="${PHENIX:-$PWD}"
+DIR="$ROOT/modules/guided_coding"
+echo "PHENIX installation: $ROOT"
+[ -d "$ROOT/modules" ] || { echo "No modules folder in $ROOT. Set up PHENIX in this shell, or cd to the installation folder that contains modules; nothing changed."; exit 1; }
 OLD=""
 for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then
   case "$(readlink "$SKILLS/$L")" in */cctbx_project/libtbx/guided_coding|*/cctbx_project/libtbx/guided_coding/) [ -z "$OLD" ] && OLD="$SKILLS/$L" && continue;; esac
   echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To move a home-folder installation here, see the line after this block. To update, see Update."; exit 1
 fi; done
+[ -n "$OLD" ] || { echo "No registration of the earlier kit was found; nothing changed. To install, use the install block above."; exit 1; }
 if [ -e "$DIR" ]; then
   case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) echo "Using the existing $DIR";; *) echo "$DIR exists but is not a clone of https://github.com/cctbx/guided_coding; nothing changed."; exit 1;; esac
 else
@@ -94,9 +123,6 @@ fi
 ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$SKILLS/gc/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
 END
 ```
-
-Still using the earlier kit from `cctbx_project/libtbx/guided_coding`? This block also moves you: it replaces only
-that registration with the new one.
 
 Already installed in your home folder? Remove that registration first. This removes only a link that points to
 `~/guided_coding`, and prints the command to put it back; `~/guided_coding` stays until you delete it:
@@ -238,8 +264,8 @@ What you gain, and what you lose:
 - **Your link.** If your link is `~/.claude/skills/guided_coding` and points to `modules/guided_coding/guided_coding`,
   updating the repository (`git pull`) is enough. The link keeps working and now gives the new `/gc`.
 - **A link into cctbx_project.** If your link points to `cctbx_project/libtbx/guided_coding` (revision 20 or older),
-  run the PHENIX block under "Install and register it (once)" (in bash, with `$PHENIX` set or from the folder that
-  contains `modules`). It clones the new GuidedCoding into `modules/guided_coding` and replaces that old
+  run the move block ("Moving from the earlier kit") under "Install and register it (once)" (in bash, with `$PHENIX`
+  set or from the folder that contains `modules`). It clones the new GuidedCoding into `modules/guided_coding` and replaces that old
   registration with the new one. Or type `/gc` with the earlier kit: it offers to do this for you.
 - **Two links.** Keep only one link to GuidedCoding. Two skills both named `gc` conflict.
 - **Your instructions.** If your `CLAUDE.local.md` adopts the earlier kit's "Developer–Guide Contract", that line can
