@@ -55,6 +55,10 @@ GC setup for <project folder>
                                                               (default: ask at each in-place swap)
 11. Rebuild after a compiled change:
                          <command and folder>                 (found / default: from the project's docs)
+12. Hand-over folder:    <where files for you to open or paste go>
+                                                              (default: the system's download folder,
+                                                               ~/Downloads on macOS; on Linux,
+                                                               xdg-user-dir DOWNLOAD)
 ```
 
 **Domain defaults.** Offer these only when the project is that kind of project.

@@ -70,10 +70,11 @@ Say these limits in one line when the batch starts:
 
 ## 4. Report
 
-- **One summary.** For each job, give:
+- **One summary.** First copy each patch meant for the developer into the hand-over folder (SKILL.md §0),
+  keeping the original in the scratch folder. Then, for each job, give:
   - its status (completed, stopped or skipped);
   - its "Ready to use" line;
-  - where its patch is;
+  - where its patch is, as a full path in the hand-over folder (SKILL.md §0);
   - whether the review fallback was used;
   - its decisions for the developer.
 
