@@ -125,6 +125,12 @@ Each block ends by showing the link and the version line of the skill it registe
 `# GuidedCoding (version 1.4)`, and what to do next. The blocks register only that version
 (`VERSION=1.4` in each block).
 
+**Then** start a new Claude Code conversation in the folder of a software project, and type `/gc` followed by a small
+task (or `/gc` alone for an introduction). If you plan to use GuidedCoding regularly on that project, run
+`/gc setup` there once (recommended): it saves the project's build and test commands, commit rules and other local
+defaults in `.claude/GC_NOTES.md`. Without it, `/gc` finds these from the project each time. Installing is once per
+computer.
+
 ### Update
 
 For an installation made with Git, run `git pull` in its folder (`~/guided_coding`, or
@@ -137,15 +143,24 @@ For an installation made with Git, run `git pull` in its folder (`~/guided_codin
 
 ### Uninstall
 
-Remove the link `gc` from your Claude Code skills folder (as in Update, step 1). You may then delete
-the `~/guided_coding` folder (or `modules/guided_coding` in PHENIX). Notes that `/gc setup` saved in a project
-(`.claude/GC_NOTES.md`) are ordinary files; delete them if you no longer want them.
+Type `/gc uninstall` in Claude Code: it shows which installation is registered and asks once. Or paste this block.
+Either way, it removes only the registration, so `/gc` stops working in new conversations. It deletes no files: it
+tells you where the GuidedCoding files are, and you can delete that folder yourself if you no longer want it.
+Project notes that `/gc setup` saved (`.claude/GC_NOTES.md` in your projects) are kept.
 
-**Then** start a new Claude Code conversation in the folder of a software project, and type `/gc` followed by a small
-task (or `/gc` alone for an introduction). If you plan to use GuidedCoding regularly on that project, run
-`/gc setup` there once (recommended): it saves the project's build and test commands, commit rules and other local
-defaults in `.claude/GC_NOTES.md`. Without it, `/gc` finds these from the project each time. Installing is once per
-computer.
+```
+sh <<'END'
+L="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/gc"
+[ -L "$L" ] || { echo "$L is not a link (or does not exist); nothing changed."; exit 1; }
+T="$(readlink "$L")"; case "$T" in /*) ;; *) T="$(dirname "$L")/$T";; esac
+[ "$(basename "$T")" = guided_coding ] || { echo "$L points to $T, not a GuidedCoding folder; nothing changed."; exit 1; }
+if [ -e "$T" ]; then grep -q '^# GuidedCoding' "$T/SKILL.md" 2>/dev/null || { echo "$L points to $T, which is not GuidedCoding; nothing changed."; exit 1; }; fi
+rm "$L" || { echo "Could not remove $L; nothing changed."; exit 1; }
+echo "GuidedCoding is no longer registered; /gc stops working in new Claude Code conversations."
+if [ -e "$T" ]; then echo "Its files are still in $(dirname "$T"). Delete that folder yourself if you no longer want it. To register it again: ln -s '$T' '$L'"; fi
+echo "Project notes (.claude/GC_NOTES.md in your projects) are kept."
+END
+```
 
 ## What the evidence says
 

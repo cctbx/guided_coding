@@ -19,9 +19,15 @@ possible, and that the result can be trusted.
     short report. Mention `/gc setup` and `/gc batch`, then
     ask for the task.
   - **`/gc setup`:** read `${CLAUDE_SKILL_DIR}/SETUP.md` and follow it. Do nothing else.
+  - **`/gc uninstall`:** start no coding job. Find the `gc` link in the skills folder (`$CLAUDE_CONFIG_DIR/skills`,
+    or else `~/.claude/skills`) and the installation it points to. Explain that uninstalling removes only this
+    registration, so `/gc` stops working in new conversations; that the GuidedCoding files stay where they are (name
+    the folder) for the developer to delete if they wish; and that project notes (`.claude/GC_NOTES.md`) are kept.
+    Ask once. If the developer agrees, run the Uninstall block from the README exactly as written, and report its
+    output.
   - **`/gc batch ...`:** read `${CLAUDE_SKILL_DIR}/BATCH.md` and follow it.
   - **`stop` or `status` while a batch is running in this session:** stop the batch, or report on it (BATCH.md §3).
-  - **An old-kit command:** exactly `help`, `status`, `history`, `uninstall` or `stop`, or the word `auto` on its own
+  - **An old-kit command:** exactly `help`, `status`, `history` or `stop`, or the word `auto` on its own
     or followed by a space (`auto`, `auto resume`, `auto <tasks>`). Start no coding job. Words that merely begin with
     "auto" (AutoSol, autobuild, auto_sharpen) are ordinary tasks. Say that these belonged to the earlier GuidedCoding
     kit, which has been retired. For `auto`, point to `/gc batch`, which runs several tasks as a supervised sequence;
