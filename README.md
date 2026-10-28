@@ -160,7 +160,8 @@ an installation made with Git, run `git pull` in its folder (`~/guided_coding`, 
 ### Uninstall
 
 Type `/gc uninstall` in Claude Code, or paste this block. It removes GuidedCoding from Claude Code and deletes its
-files. It keeps the files, and says why, unless they are demonstrably unchanged: a clean clone with nothing of your
+files, except a copy under a `modules` folder (`modules/guided_coding`), which may belong to a larger installation
+such as PHENIX and stays. It keeps the files, and says why, unless they are demonstrably unchanged: a clean clone with nothing of your
 own (no changes, ignored files, commits that are not on GitHub, other branches or stashes), or a ZIP copy whose files
 match its `RELEASE.sha256` exactly. Project notes that `/gc setup` saved (`.claude/GC_NOTES.md` in your
 projects) are kept.
@@ -177,6 +178,7 @@ rm "$L" || { echo "Could not remove $L; nothing changed."; exit 1; }
 echo "Removed GuidedCoding from Claude Code; /gc stops working in new conversations."
 KEEP=""
 if [ ! -e "$T" ]; then KEEP="-"
+elif [ "$(basename "$(dirname "$COPY")")" = modules ]; then KEEP="phenix"
 elif [ -e "$COPY/.git" ]; then
   [ -d "$COPY/.git" ] || KEEP="it is a linked Git working folder"
   [ -n "$KEEP" ] || case "$(git -C "$COPY" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) ;; *) KEEP="it is not a clone of cctbx/guided_coding";; esac
@@ -202,6 +204,7 @@ else
   fi
 fi
 if [ -z "$KEEP" ]; then rm -rf "$COPY" && echo "Deleted its files in $COPY."
+elif [ "$KEEP" = phenix ]; then echo "Kept $COPY: it is under a modules folder, so it may belong to a larger installation such as PHENIX."
 elif [ "$KEEP" != "-" ]; then echo "Kept $COPY because $KEEP. Delete it yourself if you no longer need it."; fi
 echo "Project notes (.claude/GC_NOTES.md in your projects) are kept."
 END

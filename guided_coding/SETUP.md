@@ -18,7 +18,11 @@ read-only command; if a listing is refused, say so and continue:
 - the project's instruction files: `CLAUDE.md`, `CLAUDE.local.md`, `AGENTS.md`, and any project method they name.
   Team rules in `CLAUDE.md` or `AGENTS.md` (on pushing, commits, tests, environment) go into the card as found;
 - its README, contributing guide and CI files, for build and test commands;
-- the repositories in the folder, and the remotes they push to.
+- the repositories in the folder, and the remotes they push to;
+- a defaults file, if the developer names one (for example PHENIX's, which `phenix.developer` offers). Read it
+  and use its values as suggestions, each marked "(suggested by <file>)"; they are not settings until the
+  developer confirms them, and values the project's own files give come first. Values the file marks as
+  examples are another developer's: ask for the developer's own.
 
 Note where each value came from. Never copy passwords, tokens or keys into the notes. The notes list the
 repositories they cover (item 1); `/gc` ignores them for any other repository.

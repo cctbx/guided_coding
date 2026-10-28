@@ -15,7 +15,8 @@ possible, and that the result can be trusted.
 
 - **What was asked.**
   - **`/gc` with nothing after it, or `/gc help`:** follow `${CLAUDE_SKILL_DIR}/COMMANDS.md` §1.
-  - **`/gc setup`:** read `${CLAUDE_SKILL_DIR}/SETUP.md` and follow it. Do nothing else.
+  - **`/gc setup`,** with or without a defaults file named after it: read `${CLAUDE_SKILL_DIR}/SETUP.md` and follow
+    it. Do nothing else.
   - **`/gc batch ...`:** read `${CLAUDE_SKILL_DIR}/BATCH.md` and follow it.
   - **`stop` or `status` while a batch is running in this session:** stop the batch, or report on it (BATCH.md §3).
   - **`/gc` followed by exactly `history`, `status`, `stop`, `update`, `undo` or `uninstall`:** follow `${CLAUDE_SKILL_DIR}/COMMANDS.md`.

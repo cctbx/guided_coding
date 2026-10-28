@@ -80,10 +80,12 @@ Be conservative: undo only what can be undone without losing anyone's work, and 
 
 Ask one plain question, naming the full path of the copy, in these words: "Uninstall GuidedCoding? This removes /gc
 and deletes <full path of the copy>. If you have changed or added anything in that folder, it is kept instead, and
-I'll tell you why. Your project notes are kept." If the copy is inside a PHENIX installation, add that it is part of
-that installation. Offer exactly two answers: "Yes, uninstall" and "No, keep it", with no other description. In
-the question and answers, say only what will happen to the developer's files; do not mention the README, the
-block, links or "unchanged".
+I'll tell you why. Your project notes are kept." If the copy is under a `modules` folder (`modules/guided_coding`),
+it may belong to a larger installation such as PHENIX and is not deleted; ask instead: "Uninstall GuidedCoding? This
+removes /gc. Its folder <full path of the copy> is part of a larger installation (such as PHENIX) and stays. Your
+project notes are kept." Offer exactly two
+answers: "Yes, uninstall" and "No, keep it", with no other description. In the question and answers, say only what
+will happen to the developer's files; do not mention the README, the block, links or "unchanged".
 
 If the developer says yes, run the Uninstall block from the README exactly as written, and report its output in
 plain words, including any folder it kept and why.
