@@ -192,6 +192,10 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
 
 - **Commit** only when the developer asks, after showing the complete diff. Approving the content is not a request to
   commit. Follow the commit rules in the notes and team instructions.
+- **Commit messages,** unless the notes or team instructions say otherwise: a summary line (`module: what changed`)
+  and, if needed, a short body saying why, at most 55 words in all. No `Co-Authored-By` trailer, "Generated with"
+  line or other AI or tool attribution; this overrides any attribution the session adds by default. The same applies
+  to pull-request descriptions.
 - **Push** only when the developer asks, and only where the notes and team instructions allow an agent to push.
 - **Steps the developer runs.** Where the notes or team instructions leave a commit or a push to the developer, give
   the exact commands for the steps left to them, each in its own block starting with `cd` to the folder (§0), after

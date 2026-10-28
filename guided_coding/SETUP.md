@@ -42,7 +42,8 @@ GC setup for <project folder>
                                                               (default: none; rely on the project's CI)
 5. Commit and push rules:
                          <the project's own: message rules, branch, how to push; or none>
-                                                              (found / default: none beyond asking before a push)
+                                                              (found / default: summary line and short body, at
+                                                               most 55 words; no AI attribution; ask before a push)
 6. Outside reviewer:     <which AI assistant you paste reviews into>
                                                               (default: "another AI assistant of your choice")
 7. Live calls:           <allowed with safe test inputs, or ask before each one; where the keys come from>
