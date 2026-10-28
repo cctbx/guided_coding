@@ -61,6 +61,8 @@ GC setup for <project folder>
                                                               (default: the system's download folder,
                                                                ~/Downloads on macOS; on Linux,
                                                                xdg-user-dir DOWNLOAD)
+13. Code owned by others: <paths someone else owns or is actively developing, and who>
+                                                              (found / default: none known)
 ```
 
 **Domain defaults.** Offer these only when the project is that kind of project.

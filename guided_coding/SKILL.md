@@ -117,12 +117,18 @@ possible, and that the result can be trusted.
   - Ask before changing public interfaces, defaults, file formats, intended behaviour that callers rely on, or the
     agreed project scope (including work in another repository). Changes the task explicitly requests need no question.
   - Ask the same way if the task leaves the intended behaviour open.
+  - **Code someone else owns** or is actively developing, where that is known (for example, the notes name it): ask
+    before changing it. Without approval, leave it unchanged and say in the report what is needed.
+  - **Performance:** when improving or claiming performance, measure before and after; if no meaningful measurement
+    is possible, say so.
   - To ask, give the options, a recommendation and one question the developer can answer in a word.
 
 ## 2. Fix and check
 
 - **Fix the problem the task describes,** within the scope rule.
-- **Write a proving test** that fails on the old code for the reason in the task and passes on the new code.
+- **Write a proving test** that fails on the old code for the reason in the task and passes on the new code. Run it with
+  the project's usual test command, and make sure the normal test suite will find it (for example, register it
+  where the project lists its tests).
   - **The scratch folder.** Use the folder the notes name, or else the session's scratchpad, or
     `/tmp/gc-<short task name>-<YYYYMMDD-HHMM>/`. Save test outputs there.
   - **The old code.** Before you first edit a source file, save a copy of it in the scratch folder. That copy is the
@@ -144,6 +150,8 @@ possible, and that the result can be trusted.
     If the restoration is interrupted or uncertain, stop and report that the installation must not be used until it
     has been checked.
   - **Never use `git stash`** in a checkout that may hold other work.
+  - **Remove temporary diagnostic tests** written for this job that add no lasting coverage. Keep the proving test
+    and any useful edge-case tests.
   - **If no such test is feasible,** say why and give the best other evidence. Then check trigger Q.
 - **Run the existing tests** for the code you touched, and any further suites the notes or team instructions require.
 - **Review the change.** Invoke the code-review skill with arguments "high --fix --max-findings default" on the diff
@@ -155,8 +163,9 @@ possible, and that the result can be trusted.
   - Check each fix the review applied. Keep a fix that corrects a real defect within the scope rule (§1). Revert a fix
     that is wrong, or that changes a public interface, a default, a file format or behaviour callers rely on (§1);
     raise it as a decision instead, and say what you reverted.
-  - For each finding it did not fix: fix it; or, if it is not a real problem, drop it with a one-line reason; or, if
-    it needs the developer's decision, keep it for the report.
+  - For each finding it did not fix, first confirm it is real, by reading the code or reproducing it where practical. Then fix it; or, if it is
+    not a real problem, drop it with a one-line reason; or, if it needs the developer's decision, keep it for the
+    report.
   - Rerun the tests after any change.
 
 ## 3. Added steps, only for the triggers that apply
@@ -192,22 +201,30 @@ possible, and that the result can be trusted.
 
 ## 4. Before a commit, a push, or another outward step
 
-An outward step is a push, a publication, an installation, or a run on real user data. (Consequential work, §1, is a
+An outward step is a push, opening a pull request, a publication, an installation, or a run on real user data. (Consequential work, §1, is a
 different and rarer thing: it also needs a plan, a recovery step and an outside review.)
 
 - **Commit** only when the developer asks, after showing the complete diff. Approving the content is not a request to
   commit. Follow the commit rules in the notes and team instructions.
 - **Commit messages,** unless the notes or team instructions say otherwise (their rules, templates and any required
   AI disclosure come first):
+  - one logical change per commit;
   - a short summary line (`module: what changed`, under about 70 characters) and, only if needed, a brief body
-    saying why;
+    saying why. No secrets or confidential information (such as private tracker keys); issue numbers are fine
+    where the project uses them;
   - no `Co-Authored-By` trailer, "Generated with" line or other AI or tool attribution, in commits or pull-request
     descriptions, even though Claude Code adds one by default.
 
-  After committing, read the message back (`git log -1 --format=%B`). If it breaks these rules and is not pushed,
-  correct it with `git commit --amend` and say so. If the trailer keeps appearing, offer Claude Code's own setting
-  (SETUP.md §4).
-- **Push** only when the developer asks, and only where the notes and team instructions allow an agent to push.
+  After committing, read the message back (`git log -1 --format=%B`). If it breaks these rules, amend it
+  (`git commit --amend`) only if it is the commit this job just made and it is not pushed, and say so. If the
+  trailer keeps appearing, stop amending and offer Claude Code's own setting (SETUP.md §4).
+- **Push** only when the developer asks, and only where the notes and team instructions allow an agent to push. Push
+  one named branch to a named destination, and no tags unless the developer asks:
+  `git -c push.followTags=false push --no-follow-tags origin HEAD:refs/heads/<branch>`, with the real branch name.
+- **Pull requests** only with the developer's explicit approval. Fill in the project's template. Push the branch
+  first as above, then name it (`gh pr create --head <branch>`), so the tool does not push or fork on its own.
+- **Before saying something has landed upstream,** run `git fetch` and compare with the remote. Say whether the
+  commit is only pushed to a branch or merged into the main branch.
 - **Steps the developer runs.** Where the notes or team instructions leave a commit or a push to the developer, give
   the exact commands for the steps left to them, each in its own block starting with `cd` to the folder (§0), after
   naming what is open (below):
@@ -216,7 +233,7 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
      developer to run it and report its output, and stop there. If it brought in new commits, check what changed and
      rerun the affected checks before going on (as in "Update before pushing"). If it stopped on a conflict, give
      `git rebase --abort`, which returns the checkout to where it was, and the options;
-  3. to push: `git push`, only when the update is done and the checks still hold.
+  3. to push: the push command under Push above, only when the update is done and the checks still hold.
 
   After the push, fetch and check that the local branch is not ahead of its remote. If the push was refused, go back
   to step 2.
@@ -239,7 +256,8 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
     command, process count, host and test roster all match (and any stricter rule in the notes).
   - **Who launches it.** Unless the notes say otherwise, give the commands for the developer to launch.
   - **Push after the result,** when the developer has seen it and says to push, or says to push without it. Compare
-    the candidate's roster and outcomes with the baseline's, not just the failure counts.
+    the candidate's roster and outcomes with the baseline's, including failures and skips, not just the counts. List
+    failures present in both runs, without assuming their causes are unchanged.
 - **A release** also needs a short checklist, confirmed with the developer:
   - the destination;
   - the test results;
