@@ -12,7 +12,7 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL_DIR = os.path.join(HERE, "guided_coding")
-FILES = ["SKILL.md", "BATCH.md", "SETUP.md", "REVIEWER.md", "LOG.md"]
+FILES = ["SKILL.md", "BATCH.md", "SETUP.md", "REVIEWER.md", "LOG.md", "COMMANDS.md"]
 VERSION = "1.4"
 
 
@@ -77,8 +77,8 @@ def run():
   # The README's install blocks register only this version (VERSION=... in each block).
   readme = open(os.path.join(os.path.dirname(SKILL_DIR), "README.md")).read()
   versions = re.findall(r"^\s*VERSION=(\S+)$", readme, re.M)
-  if len(versions) != 4 or set(versions) != {VERSION}:
-    failures.append("README.md: install blocks give VERSION=%s, expected %s in all four" % (versions, VERSION))
+  if len(versions) != 3 or set(versions) != {VERSION}:
+    failures.append("README.md: install blocks give VERSION=%s, expected %s in all three" % (versions, VERSION))
   # Version 1.4: six triggers, H among them, and H asks for the outside review (§3).
   skill = texts["SKILL.md"]
   if "The six triggers" not in skill:

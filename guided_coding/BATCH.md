@@ -82,4 +82,4 @@ Say these limits in one line when the batch starts:
 - **Applying patches.** Check whether the accepted patches apply together, in a throwaway copy, and say where they
   conflict. Then offer to apply them one at a time. Each one then gets the usual checks, and
   commit or push only on request (SKILL.md §4).
-- **Job log.** If the notes turn it on, add one line per job, as `LOG.md` says.
+- **Job log.** Unless the notes turn it off, add one line per job, as `LOG.md` says.

@@ -51,7 +51,9 @@ GC setup for <project folder>
                                                               (default: allowed with safe test inputs; ask first
                                                                for costly calls or calls with side effects;
                                                                keys never stored here)
-8. Job log:              <off, or a file path>                (default: off)
+8. Job log:              <on, a file path, or off>            (default: on, in ~/.claude/gc/history.tsv,
+                                                               with private copies of changed files in
+                                                               ~/.claude/gc/jobs/ for /gc undo; off stops both)
 9. Scratch folder:       <path>                               (default: the session's scratchpad, or /tmp/gc-<task>-<time>)
 10. Exclusive use:       <is this installation used by one session at a time?>
                                                               (default: ask at each in-place swap)
