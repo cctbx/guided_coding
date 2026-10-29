@@ -32,24 +32,38 @@ complete: copy each one whole, with no editing. They are for bash or zsh, the us
 or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything, and they stop on anything
 unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
 
-Most people should install GuidedCoding in their home folder. This works with any project, including PHENIX. If you
-develop PHENIX, you can instead install it in your PHENIX installation, next to your PHENIX source code.
+Most people should install GuidedCoding in their home folder, or in a folder where they keep software. This works
+with any project, including PHENIX. If you develop PHENIX, you can instead install it in your PHENIX installation,
+next to your PHENIX source code.
 
-**Most people: in your home folder, with Git.** This puts GuidedCoding in `~/guided_coding` and registers it. If
-`~/guided_coding` is already a clone of cctbx/guided_coding on `master`, it updates it with `git pull` instead:
+**To choose the folder:** the home-folder and ZIP blocks below put GuidedCoding in `~/guided_coding`. To put it
+somewhere else, first run this line in the same terminal window, with your folder in place of `$HOME/software`
+(keep the quotes and the `/guided_coding` at the end), then paste the block:
+
+```
+export GC_DIR="$HOME/software/guided_coding"
+```
+
+The block prints the folder it uses. `/gc update` and `/gc uninstall` find the folder by themselves.
+
+**Most people: in your home folder, with Git.** This puts GuidedCoding in `~/guided_coding` (or the folder in
+`GC_DIR`) and registers it. If that folder is already a clone of cctbx/guided_coding on `master`, it updates it with
+`git pull` instead:
 
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 VERSION=1.4
-DIR="$HOME/guided_coding"
+DIR="${GC_DIR:-$HOME/guided_coding}"
+case "$DIR" in /*) ;; *) echo "GC_DIR must be a full path, such as $HOME/software/guided_coding; nothing changed."; exit 1;; esac
+echo "GuidedCoding folder: $DIR"
 for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
 if [ -e "$DIR" ]; then
   case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) ;; *) echo "$DIR exists but is not a clone of https://github.com/cctbx/guided_coding; nothing changed."; exit 1;; esac
   [ "$(git -C "$DIR" rev-parse --abbrev-ref HEAD)" = master ] || { echo "$DIR is not on the master branch; nothing changed."; exit 1; }
   git -C "$DIR" pull --ff-only || { echo "Could not update $DIR; nothing registered."; exit 1; }
 else
-  git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
+  mkdir -p "$(dirname "$DIR")" && git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
 fi
 grep -qx "# GuidedCoding (version $VERSION)" "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; exit 1; }
 mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
@@ -123,11 +137,12 @@ ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$SKILLS/gc/SKILL.md" && echo "
 END
 ```
 
-Already installed in your home folder? Remove that registration first. This removes only a link that points to
-`~/guided_coding`, and prints the command to put it back; `~/guided_coding` stays until you delete it:
+Already installed in your home folder or another folder? Remove that registration first. This removes only a
+`gc` link that points to a GuidedCoding copy (not the earlier kit, and not one in a PHENIX `modules` folder), and
+prints the command to put it back; the copy stays until you delete it:
 
 ```
-L="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/gc"; T="$(readlink "$L")"; if [ "$T" = "$HOME/guided_coding/guided_coding" ]; then rm "$L" && echo "Removed $L. To put it back: ln -s $T $L"; else echo "$L points to ${T:-nothing}, not $HOME/guided_coding/guided_coding; nothing removed."; fi
+L="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/gc"; T="$(readlink "$L" | sed 's:/*$::')"; case "$T" in ""|*/cctbx_project/libtbx/guided_coding|*/modules/guided_coding/guided_coding) echo "$L points to ${T:-nothing}, not a GuidedCoding copy this line moves; nothing removed.";; *) if grep -q '^# GuidedCoding (version' "$T/SKILL.md" 2>/dev/null; then rm "$L" && echo "Removed $L. To put it back: ln -s '$(printf %s "$T" | sed "s/'/'\\\\''/g")' '$(printf %s "$L" | sed "s/'/'\\\\''/g")'"; else echo "$L points to $T, which is not GuidedCoding; nothing removed."; fi;; esac
 ```
 
 **Without Git: from the ZIP download.** Download
@@ -141,13 +156,15 @@ should print `guided_coding.zip: OK`:
 ```
 
 Then run this.
-It unpacks the ZIP into `~/guided_coding` and registers it:
+It unpacks the ZIP into `~/guided_coding` (or the folder in `GC_DIR`) and registers it:
 
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
 VERSION=1.4
-DIR="$HOME/guided_coding"
+DIR="${GC_DIR:-$HOME/guided_coding}"
+case "$DIR" in /*) ;; *) echo "GC_DIR must be a full path, such as $HOME/software/guided_coding; nothing changed."; exit 1;; esac
+echo "GuidedCoding folder: $DIR"
 ZIP="$HOME/Downloads/guided_coding.zip"
 for L in gc guided_coding; do if [ -e "$SKILLS/$L" ] || [ -L "$SKILLS/$L" ]; then echo "$SKILLS/$L already exists; nothing changed:"; ls -l "$SKILLS/$L"; echo "To update or move an existing installation, see Update and If you used the earlier GuidedCoding kit."; exit 1; fi; done
 [ -e "$DIR" ] && { echo "$DIR already exists; nothing changed. To update a ZIP installation, see Update."; exit 1; }
@@ -156,7 +173,7 @@ TMP="$(mktemp -d)" && unzip -q "$ZIP" -d "$TMP" || exit 1
 set -- "$TMP"/guided_coding-*
 [ $# -eq 1 ] && [ -f "$1/guided_coding/SKILL.md" ] || { echo "Unexpected ZIP contents; nothing changed."; rm -rf "$TMP"; exit 1; }
 grep -qx "# GuidedCoding (version $VERSION)" "$1/guided_coding/SKILL.md" 2>/dev/null || { echo "the ZIP's guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version); nothing registered."; rm -rf "$TMP"; exit 1; }
-mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
+mkdir -p "$(dirname "$DIR")" && mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKILLS" && ln -s "$DIR/guided_coding" "$SKILLS/gc" && ls -l "$SKILLS/gc" && grep -m1 '^# GuidedCoding' "$DIR/guided_coding/SKILL.md" && echo "Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
 END
 ```
 
@@ -174,13 +191,13 @@ computer.
 ### Update
 
 Type `/gc update` in Claude Code: it says whether a newer version exists, and updates after asking once. By hand: for
-an installation made with Git, run `git pull` in its folder (`~/guided_coding`, or
-`modules/guided_coding` in PHENIX). A ZIP installation has no Git history. To update it:
+an installation made with Git, run `git pull` in its folder (`~/guided_coding`, the folder you chose, or
+`modules/guided_coding` in PHENIX; `/gc help` shows which). A ZIP installation has no Git history. To update it:
 1. remove the link `gc` in your Claude Code skills folder (`$CLAUDE_CONFIG_DIR/skills` if you set
    `CLAUDE_CONFIG_DIR`, otherwise `~/.claude/skills`); it is only a link, and removing it deletes nothing else;
-2. rename `~/guided_coding` to keep it as a backup, outside the skills folder, so that only one registration remains
+2. rename its folder (`~/guided_coding`, or the folder you chose) to keep it as a backup, outside the skills folder, so that only one registration remains
    (two skills named `gc` conflict);
-3. download the new ZIP and run the ZIP block again.
+3. download the new ZIP and run the ZIP block again (after the `GC_DIR` line, if you chose a folder).
 
 ### Uninstall
 
