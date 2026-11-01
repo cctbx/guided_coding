@@ -1,4 +1,4 @@
-# GuidedCoding setup (`/gc setup`, version 1.4)
+# GuidedCoding setup (`/gc setup`, version 1.5)
 
 Setup saves a short notes file, `.claude/GC_NOTES.md`, that `/gc` reads at the start of every job. It changes
 nothing else, runs no build or test, connects to nothing, and does not start a coding task. Expect it to take a few
@@ -70,6 +70,10 @@ GC setup for <project folder>
                                                                xdg-user-dir DOWNLOAD)
 13. Code owned by others: <paths someone else owns or is actively developing, and who>
                                                               (found / default: none known)
+14. Review tools:        <the Python that runs the tests and has the markdown package; the folder holding the
+                          repositories; a folder to add to PATH for git, if any; the upstream branch>
+                                                              (found / default: python3, this folder, none,
+                                                               origin/master; see REVIEW.md)
 ```
 
 **Domain defaults.** Offer these only when the project is that kind of project.
@@ -83,6 +87,7 @@ GC setup for <project folder>
     cctbx's AGENTS.md says never to source `build/setpaths.sh`.
   - Import note: `libtbx.python` puts the installation's main checkout first on the import path, so a second working
     copy is not isolated.
+  - Review tools: `<root>/build/bin/libtbx.python` (it has the markdown package), the folder `<root>/modules`.
   - Full suite before a push: often run on a server as `phenix_regression.test_all_parallel nproc=<N> sort`, with the
     installation's `setpaths` sourced. Some developers call it "t96". Ask which server, installation, process count,
     log name and baseline rule apply, and who launches it.

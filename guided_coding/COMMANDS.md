@@ -1,4 +1,4 @@
-# GuidedCoding commands (version 1.4)
+# GuidedCoding commands (version 1.5)
 
 These commands start no coding job. Each one first finds the installation:
 

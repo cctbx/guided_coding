@@ -1,4 +1,4 @@
-# GuidedCoding batch (`/gc batch`, version 1.4)
+# GuidedCoding batch (`/gc batch`, version 1.5)
 
 A batch is a **supervised sequence of ordinary `/gc` jobs**, run one at a time while the developer stays reachable.
 Say these limits in one line when the batch starts:
@@ -22,6 +22,8 @@ Say these limits in one line when the batch starts:
 - **Record the starting state** of every repository the batch may touch: `git rev-parse HEAD` and
   `git status --short`. A job may not change a file that was already modified at the start; such a job stops instead.
 - **Make a scratch folder for the batch,** with one subfolder per job (`job-1/`, `job-2/`, and so on).
+- **Make the batch's review folder** in the batch's scratch folder (`review/`, REVIEW.md §1), for the jobs'
+  descriptions and evidence.
 
 ## 2. Run each job
 
@@ -34,6 +36,9 @@ Say these limits in one line when the batch starts:
   - these limits:
     - no commit, no push, no installation, nothing irreversible;
     - no paid live call and no outside review: mark them pending;
+    - before returning, write the change's description and run the review tools' `packet` for it in the batch's
+      review folder (`${CLAUDE_SKILL_DIR}/REVIEW.md` §1, change id `job-<n>`, with `"state": "saved"`), while its
+      changes are still in place; give no packet to the developer;
     - stop and return at the first decision the developer must make;
     - stop at the time cap.
 - **The subagent returns:**
@@ -49,7 +54,8 @@ Say these limits in one line when the batch starts:
   1. Check that its processes have ended.
   2. Check that any files it swapped in place were restored (hashes).
   3. Check the candidate is complete before removing anything: in a disposable copy of the starting state, apply its
-     patches, and compare every changed and new file with the saved copies (`cmp`). If they differ, stop the batch.
+     patches, and compare every changed and new file with the saved copies and with the job folder's `after/` copies
+     (`cmp`), which the review evidence was made from. If they differ, stop the batch.
   4. Revert its changes: restore the changed files to the starting state (unstaging them too), and remove only the
      new files it created.
   5. If it rebuilt compiled code, rebuild again from the restored sources, and say so in its entry.
@@ -70,6 +76,14 @@ Say these limits in one line when the batch starts:
 
 ## 4. Report
 
+- **The review.** One review folder for the batch, made in §1, with one description and one evidence packet per
+  completed job (§2). At the end run `scope`, `request` and `check --before-review` (REVIEW.md §1), with a packet
+  of at most five jobs at a time; the request also asks the reviewer to look for interactions between the jobs.
+  When the answers are back, follow REVIEW.md §2 and §3: one page for the batch, which the developer reads
+  instead of the summary below. Changes made because of the review are made one job at a time, in that job's
+  candidate: apply that job's patches alone, make the change, run `packet` for it, save its candidate again (§2,
+  including the completeness check), and take it out again; then check again that the accepted patches apply
+  together. The page says that the fixes are saved, not applied.
 - **One summary.** First copy each patch meant for the developer into the hand-over folder (SKILL.md §0),
   keeping the original in the scratch folder. Then, for each job, give:
   - its status (completed, stopped or skipped);
@@ -128,8 +142,9 @@ Say these limits in one line when the batch starts:
     that commit; I'll keep a copy.";
   - when the developer is done: which jobs' changes are still in their files, and that they are not committed.
 - **Applying patches.** Check whether the accepted patches apply together, in a throwaway copy, and say where they
-  conflict. Then offer to apply them one at a time. Each one then gets the usual checks, and
-  commit or push only on request (SKILL.md §4). A shown job that the developer keeps stays applied (do not apply it
+  conflict. Then offer to apply them one at a time. Each one then gets the usual checks; when all the accepted ones
+  are in, rerun each job's proving test and the suites on the combined code. Commit or push only on request
+  (SKILL.md §4). A shown job that the developer keeps stays applied (do not apply it
   again) and gets the same checks. Its shown state becomes the expected state of its files, and jobs shown after
   it are applied on top of it.
 - **Job log.** Unless the notes turn it off, add one line per job, as `LOG.md` says.

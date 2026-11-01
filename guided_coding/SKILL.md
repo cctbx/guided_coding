@@ -4,7 +4,7 @@ description: GuidedCoding for one bounded bug fix or change, or a supervised bat
 disable-model-invocation: true
 ---
 
-# GuidedCoding (version 1.4)
+# GuidedCoding (version 1.5)
 
 The developer's request is: $ARGUMENTS
 
@@ -190,26 +190,18 @@ possible, and that the result can be trusted.
   - A live failure outranks every offline test.
   - If you cannot make the calls, give the exact commands.
 - **P (other platform): give the exact commands** to run on that platform.
-- **H, R, D or Q, and consequential work: an outside review.** Write one file, `OUTSIDE_REVIEW.md`, in the scratch
-  folder, and copy it to the hand-over folder (§0). It contains:
-  - the task text;
-  - the full diff;
-  - the new tests and their output on the old and new code;
-  - for H, one line naming the conditions that make the change hard; for Q, the open question;
-  - this request: "Review this change for correctness, unintended behaviour changes, and whether the tests prove the
-    fix. List findings, most serious first."
-
-  Leave out keys, tokens and user data, and name anything you removed. The developer pastes the file into the
-  outside reviewer the notes name (or another AI assistant) and pastes the reply back.
+- **H, R, D or Q, and consequential work: an outside review.** Follow `${CLAUDE_SKILL_DIR}/REVIEW.md`: the change's
+  description and generated evidence, and a packet for the outside reviewer the notes name, put on the clipboard.
+  For H, the description names the conditions that make the change hard; for Q, the open question. Leave out keys,
+  tokens and user data, and name anything you removed.
 - **An outside review on request.** For any other job, the outside review is optional: the report offers it in one
-  line, and the developer may ask for it at any time. Write the same file; the review is then handled as for the
-  triggers.
+  line, and the developer may ask for it at any time. It then follows REVIEW.md as for the triggers.
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
 - **Finish before you report.** If you start a long test or build, wait for it to finish (or stop it) before writing
   any outside-review file and the final report. Leave nothing this job started running in the background. The final
   report is your last message.
-- **When the output or the outside review comes back,** treat each problem or finding as in §2, and update the
-  report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
+- **When the output or the outside review comes back,** treat each problem or finding as in §2 (for the outside
+  review, as REVIEW.md §2 says), and update the report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
   accepting the uncertainty.
 
 ## 4. Before a commit, a push, or another outward step
@@ -281,6 +273,9 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
 
 ## 5. Final report (this form, nothing longer)
 
+With an outside review (§3), the developer first sees only the short message of REVIEW.md §1, and after the review
+the page of REVIEW.md §3; the report below is still written and saved, and the page's message gives its path.
+
 - **Ready to use:** yes, or no. Say no while a step is pending, an essential check fails, or an important correctness
   finding is unresolved. List what is open and explain the consequence. Name exactly what the developer accepted or
   skipped.
@@ -324,4 +319,4 @@ else `${CLAUDE_CONFIG_DIR:-~/.claude}/gc/history.tsv` (create the folder if need
 `/gc history` and `/gc undo` read it.
 
 ---
-Version 1.4, 2026-10-26.
+Version 1.5, 2026-11-01.

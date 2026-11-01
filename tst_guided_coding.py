@@ -12,8 +12,8 @@ import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL_DIR = os.path.join(HERE, "guided_coding")
-FILES = ["SKILL.md", "BATCH.md", "SETUP.md", "REVIEWER.md", "LOG.md", "COMMANDS.md"]
-VERSION = "1.4"
+FILES = ["SKILL.md", "BATCH.md", "SETUP.md", "REVIEWER.md", "LOG.md", "COMMANDS.md", "REVIEW.md"]
+VERSION = "1.5"
 
 
 def read(name):
@@ -107,8 +107,15 @@ def self_test():
   return [] if caught else ["self-test: a broken reference to BATCH.md section 3 was not caught"]
 
 
+def review_tools():
+  """The review tools' checker refuses incomplete reviews (tools/tst_review_pages.py)."""
+  sys.path.insert(0, os.path.join(SKILL_DIR, "tools"))
+  import tst_review_pages
+  return ["review tools: " + f for f in tst_review_pages.run()]
+
+
 if __name__ == "__main__":
-  failures = run() + self_test()
+  failures = run() + self_test() + review_tools()
   for failure in failures:
     print("FAIL: " + failure)
   if failures:

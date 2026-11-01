@@ -1,0 +1,72 @@
+<!-- Navigation test for a page made by make_single.py: append to a copy of the page and open it in headless Chrome with --dump-dom; the result is in body[data-navtest]. -->
+<script>
+(function () {
+  var log = [], ok = true;
+  function $(s) { return document.querySelector(s); }
+  function barBottom() { return $(".bar").getBoundingClientRect().bottom; }
+  function state(label) {
+    return label + ": y=" + Math.round(scrollY) + " hash=" + (location.hash || "-") +
+      " open=[" + Array.prototype.map.call(document.querySelectorAll("details.evidence[open]"), function (d) { return d.id.replace("-evidence", ""); }).join(",") + "]" +
+      " back=" + ($("#nav-back").disabled ? "off" : "on") + " where='" + $("#nav-where").textContent + "'";
+  }
+  function check(cond, what) { if (!cond) { ok = false; log.push("FAIL " + what); } }
+  function clear(id) { var r = document.getElementById(id).getBoundingClientRect(); var ok2 = r.top >= barBottom() - 1 && r.top <= barBottom() + 40; if (!ok2) log.push("  (" + id + " top=" + Math.round(r.top) + " barBottom=" + Math.round(barBottom()) + " y=" + Math.round(scrollY) + " max=" + (document.documentElement.scrollHeight - innerHeight) + ")"); return ok2; }
+  var steps = [];
+  var n = document.querySelectorAll("section.change").length;
+  var cA = "change-" + Math.min(4, n), cB = "change-" + Math.min(3, n),
+    cC = "change-" + Math.min(2, n), cLast = "change-" + n;
+  function step(f) { steps.push(f); }
+  var y0;
+  step(function () { y0 = scrollY; log.push(state("start")); check($("#nav-back").disabled, "Back off at start"); });
+  // 1. table link to change 4, then Back
+  step(function () { $('table.changes a[href="#' + cA + '"]').click(); });
+  step(function () { log.push(state("1 table->" + cA)); check(clear(cA), cA + " heading clear of the bar"); check(location.hash == "#" + cA, "hash #" + cA); });
+  step(function () { $("#nav-back").click(); });
+  step(function () { log.push(state("1 Back")); check(Math.abs(scrollY - y0) < 2, "Back returns to the table position"); check(!location.hash, "hash restored"); });
+  // 2. open change 4 evidence, scroll deep, Back
+  var yOpen;
+  step(function () { document.getElementById(cA).scrollIntoView(); });
+  step(function () { yOpen = scrollY; $("#" + cA + "-evidence > summary").click(); });
+  step(function () { check($("#" + cA + "-evidence").open, "evidence open"); window.scrollTo(0, scrollY + 2500); });
+  step(function () { log.push(state("2 deep in the evidence")); $("#nav-back").click(); });
+  step(function () { log.push(state("2 Back")); check(Math.abs(scrollY - yOpen) < 2, "Back returns to where evidence was opened (y=" + scrollY + " expected " + yOpen + ")"); check(!$("#" + cA + "-evidence").open, "evidence folded again by Back"); });
+  // 3. a finding link to change 3, then Back
+  var yF;
+  step(function () { window.scrollTo(0, 0); });
+  var finding = null;
+  step(function () { yF = scrollY; finding = $("table.findings a"); if (finding) finding.click(); });
+  step(function () { if (!finding) { log.push("3 no findings table: skipped"); return; } var id = finding.getAttribute("href").slice(1); log.push(state("3 finding->" + id)); check(clear(id), id + " clear of the bar"); $("#nav-back").click(); });
+  step(function () { if (finding) { log.push(state("3 Back")); check(Math.abs(scrollY - yF) < 2, "Back returns to the findings"); } });
+  // 4. Top, then Back
+  var yT;
+  step(function () { document.getElementById(cLast).scrollIntoView(); });
+  step(function () { yT = scrollY; $("#nav-top").click(); });
+  step(function () { log.push(state("4 Top")); check(scrollY < 5, "Top goes to the top"); $("#nav-back").click(); });
+  step(function () { log.push(state("4 Back")); check(Math.abs(scrollY - yT) < 2, "Back returns from Top (y=" + scrollY + " expected " + yT + ")"); });
+  // 5. several changes, then Back repeatedly
+  var ys = [];
+  step(function () { window.scrollTo(0, 0); });
+  step(function () { ys.push(scrollY); document.querySelector('.bar .changes button[data-target="change-1"]').click(); });
+  step(function () { ys.push(scrollY); document.querySelector('.bar .changes button[data-target="' + cC + '"]').click(); });
+  step(function () { ys.push(scrollY); log.push(state("5 at " + cC)); document.querySelector('.bar .changes button[data-target="' + cLast + '"]').click(); });
+  step(function () { log.push(state("5 at " + cLast)); check(new RegExp(n + " of " + n).test($("#nav-where").textContent), "bar says the last change"); $("#nav-back").click(); });
+  step(function () { check(Math.abs(scrollY - ys[2]) < 2, "Back 1 -> change 2"); $("#nav-back").click(); });
+  step(function () { check(Math.abs(scrollY - ys[1]) < 2, "Back 2 -> change 1"); $("#nav-back").click(); });
+  step(function () { log.push(state("5 three Backs")); check(Math.abs(scrollY - ys[0]) < 2, "Back 3 -> top"); check($("#nav-back").disabled, "Back off when the list is empty"); });
+  // 7. open and close evidence: the opening step is taken back
+  var n0;
+  step(function () { document.getElementById(cC).scrollIntoView(); });
+  step(function () { $("#" + cC + "-evidence > summary").click(); });
+  step(function () { check(!$("#nav-back").disabled, "opening evidence is a Back step"); window.scrollTo(0, scrollY + 1200); });
+  step(function () { $("#" + cC + "-evidence .close-evidence").click(); });
+  step(function () { log.push(state("7 closed the evidence")); check(!$("#" + cC + "-evidence").open, "evidence closed"); check($("#nav-back").disabled, "closing took the opening step back"); });
+  // 8. the bar's measured height is used
+  step(function () { var v = getComputedStyle(document.documentElement).getPropertyValue("--bar-h"); log.push("8 --bar-h=" + v.trim() + " bar=" + Math.round($(".bar").getBoundingClientRect().height)); check(Math.abs(parseFloat(v) - $(".bar").getBoundingClientRect().height) < 1, "--bar-h equals the bar height"); });
+  var i = 0;
+  function run() {
+    if (i < steps.length) { try { steps[i++](); } catch (e) { ok = false; log.push("ERROR " + e); } setTimeout(run, 60); return; }
+    document.body.setAttribute("data-navtest", (ok ? "ALL PASSED" : "SOME FAILED") + " || " + log.join(" || "));
+  }
+  window.addEventListener("load", function () { setTimeout(run, 400); });
+})();
+</script></html>

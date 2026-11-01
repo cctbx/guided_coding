@@ -1,4 +1,4 @@
-# GuidedCoding job log (version 1.4)
+# GuidedCoding job log (version 1.5)
 
 When the job ends (the developer has answered the open decisions, or says the job is done), append one line to the
 job log (SKILL.md §6). Log stopped and abandoned jobs too. Separate the fields with tabs, use no tabs inside a

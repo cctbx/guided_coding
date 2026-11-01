@@ -53,7 +53,7 @@ The block prints the folder it uses. `/gc update` and `/gc uninstall` find the f
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
-VERSION=1.4
+VERSION=1.5
 DIR="${GC_DIR:-$HOME/guided_coding}"
 case "$DIR" in /*) ;; *) echo "GC_DIR must be a full path, such as $HOME/software/guided_coding; nothing changed."; exit 1;; esac
 echo "GuidedCoding folder: $DIR"
@@ -81,7 +81,7 @@ you are allowed to change it.
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
-VERSION=1.4
+VERSION=1.5
 ROOT="${PHENIX:-$PWD}"
 DIR="$ROOT/modules/guided_coding"
 echo "PHENIX installation: $ROOT"
@@ -109,7 +109,7 @@ which is why Claude Code asks you to approve an `rm`); if anything fails, it put
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
-VERSION=1.4
+VERSION=1.5
 ROOT="${PHENIX:-$PWD}"
 DIR="$ROOT/modules/guided_coding"
 echo "PHENIX installation: $ROOT"
@@ -161,7 +161,7 @@ It unpacks the ZIP into `~/guided_coding` (or the folder in `GC_DIR`) and regist
 ```
 sh <<'END'
 SKILLS="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"
-VERSION=1.4
+VERSION=1.5
 DIR="${GC_DIR:-$HOME/guided_coding}"
 case "$DIR" in /*) ;; *) echo "GC_DIR must be a full path, such as $HOME/software/guided_coding; nothing changed."; exit 1;; esac
 echo "GuidedCoding folder: $DIR"
