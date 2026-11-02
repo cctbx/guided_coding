@@ -77,7 +77,8 @@ focused tests per change, the essential code only, a description as long as the 
 ## 3. The developer's page
 
 - **Make it:** `page`, then `check` (now including the page). Fix every problem it reports. `navtest` (Google
-  Chrome) is needed only after a change to the page tools.
+  Chrome, at its usual macOS place) is needed only after a change to the page tools; it is a check for
+  GuidedCoding's developers, and reading a page needs only a browser.
 - **Deliver it** as a private claude.ai page with the Artifact tool, titled with `page_title`, and give the link;
   give it again as the very last line of the job's last message (SKILL.md §5).
   Where the session has no Artifact tool, copy `out/page.html` to the hand-over folder and give its full path,

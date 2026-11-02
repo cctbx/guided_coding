@@ -225,17 +225,25 @@ def markdown_cases():
   # Raw HTML is text
   expect("A <script>alert(1)</script> <b>x</b> <img src=x onerror=alert(1)>",
     "&lt;script&gt;", "&lt;img", absent = ["<script", "<b>", "<img"])
-  # Links only to the page, http(s) and mailto; others keep their text
-  for url in ("javascript:alert(1)", "data:text/html,z", "//evil.example/c",
-      "/etc/passwd", "../private/report.html", "https:example.org",
-      "\"javascript:alert(1)\""):
-    expect("[text](%s)" %url, "text", absent = ["<a", "href"])
-  expect("<javascript:alert(1)>", absent = ["<a", "href"])
-  expect("[a](#change-2) [b](https://example.org/a) [m](mailto:a@b.org)",
-    '<a href="#change-2">a</a>', '<a href="https://example.org/a">b</a>',
-    '<a href="mailto:a@b.org">m</a>')
-  if review_pages.SAFE_LINK.fullmatch("https://example.org\n"):
-    failures.append("Markdown: a link ending in a newline was accepted")
+  # Links only to anchors on this page; any other keeps its text and
+  #  formatting, and is not clickable
+  for url in ("https://example.org/a", "http://example.org", "mailto:a@b.org",
+      "javascript:alert(1)", "data:text/html,z", "//evil.example/c",
+      "/etc/passwd", "../private/report.html", "file:///etc/passwd",
+      "https:example.org", "\"javascript:alert(1)\""):
+    expect("[**text**](%s)" %url, "<strong>text</strong>",
+      absent = ["<a", "href"])
+  expect("[ref text][r]\n\n[r]: https://example.org/x", "ref text",
+    absent = ["<a", "href"])
+  for md in ("<https://example.org>", "<mailto:a@b.org>", "<a@b.org>",
+      "<javascript:alert(1)>"):
+    expect(md, absent = ["<a", "href"])
+  expect("[a](#change-2) [*b*](#change-1-after) [c][r]\n\n[r]: #review",
+    '<a href="#change-2">a</a>', '<a href="#change-1-after"><em>b</em></a>',
+    '<a href="#review">c</a>')
+  for url in ("https://example.org", "#a b", "#x\n", '#a"b'):
+    if review_pages.SAFE_LINK.fullmatch(url):
+      failures.append("Markdown: the link %r was accepted" %url)
   # An image keeps only its text; no attribute list is read
   expect("![alt text](https://evil.example/x.png)", "alt text",
     absent = ["<img", "evil.example"])
@@ -335,6 +343,51 @@ def hostile_page_cases():
     found = [p for p in review_pages.check(spec) if p.startswith("page")]
     if found:
       failures.append("hostile page refused by check: %s" %found)
+  finally:
+    review_pages.unpushed = saved
+    shutil.rmtree(folder)
+  return failures
+
+def page_link_cases():
+  """In every field that reaches the page, an anchor on the page stays a
+     link and any other destination becomes text"""
+  if not has_markdown():
+    return []
+  failures = []
+  def links(field):
+    return ("[inside %s](#change-1) [outside %s](https://example.org/%s) "
+      "<https://example.org/auto-%s>" %(field, field, field, field))
+  description = DESCRIPTION.replace("It failed.", "It failed. " +
+    links("description")) + "\n## Changes after the review\n- Done.\n"
+  folder = make_folder(description = description)
+  saved = review_pages.unpushed
+  try:
+    spec = review_pages.load(folder)
+    spec["review_summary"] = "Reviewed. " + links("review")
+    spec["result"] = "Accepted. " + links("result")
+    spec["findings"] = [{"found": links("finding"), "changes": [1],
+      "done": "done"}]
+    review_pages.unpushed = lambda spec: ([], [])
+    t = open(review_pages.page(spec)).read()
+    main = t[t.index("<main"):t.index("</main>")]
+    for field in ("description", "review", "result", "finding"):
+      if '<a href="#change-1">inside %s</a>' %field not in main:
+        failures.append("page links: the anchor in the %s is not a link" %field)
+      if "outside %s" %field not in main:
+        failures.append("page links: the text of the %s link is gone" %field)
+    for h in re.findall(r'href="([^"]*)"', main):
+      if not h.startswith("#"):
+        failures.append("page links: a link to %s" %h)
+    if "example.org" in "".join(re.findall(r'href="[^"]*"', main)):
+      failures.append("page links: an outside address is clickable")
+    # The page's own template loads nothing from outside (no fonts, styles
+    #  or scripts from another server)
+    template = t.replace(main, "")
+    if re.search(r"https?:|//[\w.-]+\.\w", template):
+      failures.append("page links: the template names an outside address")
+    found = [p for p in review_pages.check(spec) if p.startswith("page")]
+    if found:
+      failures.append("page links: check refused the page: %s" %found)
   finally:
     review_pages.unpushed = saved
     shutil.rmtree(folder)
@@ -471,6 +524,7 @@ def run():
   failures.extend(markdown_cases())
   failures.extend(dependency_cases())
   failures.extend(hostile_page_cases())
+  failures.extend(page_link_cases())
   return failures
 
 if __name__ == "__main__":

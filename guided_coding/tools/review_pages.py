@@ -11,7 +11,7 @@ the markdown package (for PHENIX: libtbx.python):
   python review_pages.py request <review folder> [<change id> ...]
   python review_pages.py page    <review folder>   # the developer's page
   python review_pages.py check   <review folder> [--before-review]
-  python review_pages.py navtest <review folder>   # needs Google Chrome
+  python review_pages.py navtest <review folder>   # a developer check
 
 Outputs go to <review folder>/evidence/ and <review folder>/out/.
 
@@ -682,8 +682,8 @@ STYLE = """
 :root {
   --bg: #fbfcfd; --fg: #1b2430; --muted: #5b6676; --line: #d5dbe3;
   --panel: #eef2f6; --accent: #1f5fa8; --add: #e6f3ea; --del: #f9e8e8;
-  --font-body: "IBM Plex Sans", -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --font-body: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, Menlo, Consolas, monospace;
   --bar-h: 3.4rem; /* replaced by the bar's measured height */
 }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
@@ -767,10 +767,6 @@ details.evidence[open] > summary { border-bottom: 1px solid var(--line); }
     font-size: 0.8rem; color: var(--muted); } }
 main p, main li, main td, main strong { overflow-wrap: anywhere; }
 """
-
-FONTS = ('<link rel="stylesheet" href="https://fonts.googleapis.com/css2?'
-  'family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600'
-  '&display=swap">')
 
 SCRIPT = """
 (function () {
@@ -923,13 +919,12 @@ SCRIPT = """
 #  - the page's own anchors (#top, #review, ...) are made by the page, not
 #    by Markdown;
 #  - a last pass over Markdown's element tree keeps a link only to an
-#    anchor on the page, an http(s) address with a host, or a plain mailto
-#    address (others keep their text), turns an image into its alt text,
+#    anchor on this page (any other link keeps its text and formatting,
+#    but is not clickable), turns an image into its alt text,
 #    and removes any attribute but those below. Code blocks are the one
 #    part fenced_code makes outside that tree: their text is escaped and
 #    their only attribute is the language class.
-SAFE_LINK = re.compile(r"#[\w.:-]*|https?://[A-Za-z0-9][A-Za-z0-9.-]*"
-  r"(:\d+)?([/?#][^\s\\]*)?|mailto:[^\s\\/:]+@[A-Za-z0-9.-]+", re.I)
+SAFE_LINK = re.compile(r"#[\w.:-]*")  # used with fullmatch
 SAFE_ATTRIBUTES = {"a": {"href": SAFE_LINK},
   "th": {"style": re.compile(r"text-align: (left|right|center);")},
   "td": {"style": re.compile(r"text-align: (left|right|center);")}}
@@ -1127,9 +1122,9 @@ def page(spec):
     '</span><select id="nav-select" aria-label="Go to a change"><option '
     'value="">Changes</option>%s</select></div></nav>' %(buttons, options))
   text = ("<title>%s</title>\n<meta name=\"claude:viewport-fit-sides\" "
-    "content=\"cover\">\n%s\n<style>%s</style>\n%s\n<main>%s</main>\n"
-    "<script>%s</script>\n" %(html.escape(spec["page_title"]), FONTS, STYLE,
-    bar, "".join(body), SCRIPT))
+    "content=\"cover\">\n<style>%s</style>\n%s\n<main>%s</main>\n"
+    "<script>%s</script>\n" %(html.escape(spec["page_title"]), STYLE, bar,
+    "".join(body), SCRIPT))
   path = os.path.join(out_dir(spec), "page.html")
   with open(path, "w") as f:
     f.write(text)
@@ -1451,7 +1446,9 @@ def check(spec, before_review = False):
   return problems
 
 # ---------------------------------------------------------------------------
-# navtest: click through the page's navigation in headless Chrome
+# navtest: click through the page's navigation in headless Chrome. A check
+#  for changes to the page tools only: reading a page needs any browser,
+#  not Chrome. Chrome is looked for at its usual macOS place only
 
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 
