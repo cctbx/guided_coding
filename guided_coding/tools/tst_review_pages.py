@@ -3,7 +3,7 @@
 A small review folder that is complete must pass; each broken version must
 be refused for its own reason. Run: python3 tst_review_pages.py
 """
-import json, os, shutil, sys, tempfile
+import json, os, re, shutil, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -196,18 +196,149 @@ def saved_copy_cases():
     shutil.rmtree(folder)
   return failures
 
-def markdown_cases():
-  """Raw HTML in a description or review comes out as text"""
+def has_markdown():
   try:
     import markdown
+    return True
   except ImportError:
-    print("Note: no markdown package here, so the HTML escaping is not "
+    return False
+
+def markdown_cases():
+  """Untrusted text in the page: what it may and may not become"""
+  if not has_markdown():
+    print("Note: no markdown package here, so the page's Markdown is not "
       "tested; run this with a Python that has it (libtbx.python)")
     return []
-  h = review_pages.convert("A <script>alert(1)</script> and <b>x</b>")
-  if "<script" in h or "<b>" in h:
-    return ["raw HTML was kept: %s" %h]
-  return []
+  failures = []
+  def expect(md, *wanted, **kw):
+    h = review_pages.convert(md)
+    for w in wanted:
+      if w not in h:
+        failures.append("Markdown: %r gave %r, without %r" %(md, h, w))
+    for w in kw.get("absent", ()):
+      if w in h:
+        failures.append("Markdown: %r gave %r, with %r" %(md, h, w))
+    if kw.get("no_attributes"):  # no tag carries any attribute
+      for tag in re.findall(r"<[a-zA-Z][^>]*>", h):
+        if re.search(r"\s\w", tag):
+          failures.append("Markdown: %r gave %r, with an attribute" %(md, h))
+  # Raw HTML is text
+  expect("A <script>alert(1)</script> <b>x</b> <img src=x onerror=alert(1)>",
+    "&lt;script&gt;", "&lt;img", absent = ["<script", "<b>", "<img"])
+  # Links only to the page, http(s) and mailto; others keep their text
+  for url in ("javascript:alert(1)", "data:text/html,z", "//evil.example/c",
+      "/etc/passwd", "../private/report.html", "https:example.org",
+      "\"javascript:alert(1)\""):
+    expect("[text](%s)" %url, "text", absent = ["<a", "href"])
+  expect("<javascript:alert(1)>", absent = ["<a", "href"])
+  expect("[a](#change-2) [b](https://example.org/a) [m](mailto:a@b.org)",
+    '<a href="#change-2">a</a>', '<a href="https://example.org/a">b</a>',
+    '<a href="mailto:a@b.org">m</a>')
+  if review_pages.SAFE_LINK.fullmatch("https://example.org\n"):
+    failures.append("Markdown: a link ending in a newline was accepted")
+  # An image keeps only its text; no attribute list is read
+  expect("![alt text](https://evil.example/x.png)", "alt text",
+    absent = ["<img", "evil.example"])
+  for md in ('## H {: onmouseover="x" #ok}', '## H {#bad" onclick="x}',
+      'text {: onclick="x" }', "# Title {#top}"):
+    expect(md, no_attributes = True)
+  # Code blocks, which Python-Markdown builds apart from the rest: the
+  #  cleaning of the finished HTML still removes what they add
+  for md in ('```{.python onclick="alert(1)"}\nx\n```',
+      '```{.python style="color:red" #i}\nx\n```', '```{: onclick="a"}\nx\n```'):
+    expect(md, "<pre><code", absent = ["onclick", "style=", 'id="i"',
+      "<pre id", "<pre class"])
+  expect('```{#review .x .onclick}\nx\n```', '<pre><code class="language-x">',
+    absent = ['id="review"', 'class="onclick"'])
+  expect('``` {.a" onclick="x}\nx\n```', absent = ["onclick="])
+  expect("```{#top .x}\r\nx\r\n```", '<pre><code class="language-x">',
+    absent = ['id="top"'])
+  # A code block shown inside a code block stays exactly as written
+  expect('````text\n```{.python onclick="alert(1)"}\nexample\n```\n````',
+    '```{.python onclick=&quot;alert(1)&quot;}', absent = ["<pre><code "
+    'class="language-python"'])
+  # A link disguised with character references is still refused
+  expect("[x](javascript&#58;alert(1)) [y](java&#x73;cript:alert(1))",
+    absent = ["<a", "href"])
+  # The forms the descriptions and the page use
+  expect("```diff\n+new\n-old\n```", '<pre><code class="language-diff">',
+    '<span class="add">+new</span>', '<span class="del">-old</span>')
+  expect("- **Test:** a\n  continued\n- two", "<strong>Test:</strong> a")
+  expect("text\n\n| a | b |\n|---|---|\n| `x|y` | 2 |", "<th>a</th>",
+    "<code>x|y</code>", "<td>2</td>")
+  expect("| a | b |\n|---|---|\n| ``x|y`` | 2 |", "<code>x|y</code>",
+    "<td>2</td>")
+  expect("\\` literal `code`", "` literal <code>code</code>")
+  # Found in the reviews: none of these crashes the page
+  for md in (">" * 1200 + " deep", "\n".join("  " * k + "- x"
+      for k in range(600)), "9" * 5000 + ". x"):
+    try:
+      review_pages.convert(md)
+    except Exception as e:
+      failures.append("Markdown: %r... raised %s" %(md[:20], e))
+  return failures
+
+def dependency_cases():
+  """Without Python-Markdown, the page says what is needed"""
+  saved = sys.modules.get("markdown")
+  sys.modules["markdown"] = None  # importing it then fails
+  try:
+    review_pages.convert("x")
+    return ["the page was made without Python-Markdown"]
+  except ImportError as e:
+    if "Python-Markdown" not in str(e) or "libtbx.python" not in str(e):
+      return ["an unclear error without Python-Markdown: %s" %e]
+    return []
+  finally:
+    if saved is None:
+      del sys.modules["markdown"]
+    else:
+      sys.modules["markdown"] = saved
+
+HOSTILE = ("<script>alert(1)</script> <img src=x onerror=alert(2)> "
+  "<svg onload=alert(3)></svg> \" onmouseover=\"alert(4) "
+  "[a](javascript:alert(5)) [b](//evil.example/c) [c](data:text/html,x) "
+  "![i](https://evil.example/i.png) {: onclick=\"alert(6)\" }\n\n"
+  "```{.python onclick=\"alert(7)\" style=\"x\"}\ncode\n```\n")
+
+def hostile_page_cases():
+  """A whole page with hostile text in every field that reaches it: no
+     markup, script or unsafe link gets through"""
+  if not has_markdown():
+    return []
+  failures = []
+  description = DESCRIPTION.replace("It failed.", "It failed. " + HOSTILE
+    ).replace("It checks for empty input first.", HOSTILE + "\n\n" +
+    ">" * 500 + " deep") + "\n## Changes after the review\n- " + HOSTILE + "\n"
+  folder = make_folder(description = description,
+    old_body = "%s\n%s\nAssertionError: 7/3" %(review_pages.TEST_STARTED,
+    HOSTILE))
+  saved = review_pages.unpushed
+  try:
+    spec = review_pages.load(folder)
+    spec["review_summary"] = "Reviewed. " + HOSTILE
+    spec["result"] = "Accepted. " + HOSTILE
+    spec["title"] = "Title " + HOSTILE
+    spec["findings"] = [{"found": HOSTILE, "changes": [1], "done": HOSTILE}]
+    review_pages.unpushed = lambda spec: ([], [])
+    t = open(review_pages.page(spec)).read()
+    main = t[t.index("<main"):t.index("</main>")]
+    # Every tag in the body is one the page makes, with no event handler
+    for tag in re.findall(r"<([a-zA-Z][^\s>/]*)([^>]*)>", main):
+      if tag[0].lower() in ("script", "img", "svg", "iframe", "object"):
+        failures.append("hostile page: a <%s> tag" %tag[0])
+      if re.search(r"\son\w+\s*=", tag[1]):
+        failures.append("hostile page: an event handler in <%s%s>" %tag)
+    for h in re.findall(r'href="([^"]*)"', main):
+      if not review_pages.SAFE_LINK.fullmatch(h):
+        failures.append("hostile page: a link to %s" %h)
+    found = [p for p in review_pages.check(spec) if p.startswith("page")]
+    if found:
+      failures.append("hostile page refused by check: %s" %found)
+  finally:
+    review_pages.unpushed = saved
+    shutil.rmtree(folder)
+  return failures
 
 def run():
   failures = []
@@ -306,9 +437,10 @@ def run():
   try:
     spec = review_pages.load(folder)
     del spec["review_summary"]
-    md = review_pages.review_md(spec)
-    if "{#review}" not in md or "No outside review" not in md:
-      failures.append("a page without an outside review: %s" %md)
+    if has_markdown():
+      md = review_pages.review_md(spec)
+      if 'id="review"' not in md or "No outside review" not in md:
+        failures.append("a page without an outside review: %s" %md)
     # Allowed only when the job named no triggers; refused for H, for no
     #  triggers given, and for an empty review_summary
     spec["triggers"] = []
@@ -337,6 +469,8 @@ def run():
     shutil.rmtree(folder)
   failures.extend(saved_copy_cases())
   failures.extend(markdown_cases())
+  failures.extend(dependency_cases())
+  failures.extend(hostile_page_cases())
   return failures
 
 if __name__ == "__main__":

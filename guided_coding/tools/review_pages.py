@@ -911,17 +911,72 @@ SCRIPT = """
 })();
 """
 
+# The text that goes through Markdown comes from descriptions, the outside
+#  review and test output, so it is not trusted. Python-Markdown is used
+#  with only the tables and fenced_code extensions, and in this way:
+#  - raw HTML in the text is escaped (its html_block and html parts are
+#    switched off);
+#  - attr_list is not used, so no text can add attributes; and where
+#    fenced_code reads a code block's {...} header, only its first class is
+#    kept, as the language (fenced_code would otherwise take an id and
+#    further classes from it);
+#  - the page's own anchors (#top, #review, ...) are made by the page, not
+#    by Markdown;
+#  - a last pass over Markdown's element tree keeps a link only to an
+#    anchor on the page, an http(s) address with a host, or a plain mailto
+#    address (others keep their text), turns an image into its alt text,
+#    and removes any attribute but those below. Code blocks are the one
+#    part fenced_code makes outside that tree: their text is escaped and
+#    their only attribute is the language class.
+SAFE_LINK = re.compile(r"#[\w.:-]*|https?://[A-Za-z0-9][A-Za-z0-9.-]*"
+  r"(:\d+)?([/?#][^\s\\]*)?|mailto:[^\s\\/:]+@[A-Za-z0-9.-]+", re.I)
+SAFE_ATTRIBUTES = {"a": {"href": SAFE_LINK},
+  "th": {"style": re.compile(r"text-align: (left|right|center);")},
+  "td": {"style": re.compile(r"text-align: (left|right|center);")}}
+LANGUAGE = re.compile(r"[\w+-]+")
+
 def markdown_text(text, extensions = ()):
-  """Markdown to HTML with any raw HTML in the text escaped: the text
-     comes from descriptions and the outside review"""
-  import markdown
+  """Markdown to HTML, for untrusted text (above)"""
+  try:
+    import markdown
+    from markdown.treeprocessors import Treeprocessor
+  except ImportError:
+    raise ImportError("review_pages.py needs the Python-Markdown package "
+      "(import markdown), and this Python (%s) does not have it: run it with "
+      "a Python that has it (for PHENIX: libtbx.python)" %sys.executable)
+  class Safe(Treeprocessor):
+    def run(self, root):
+      for element in root.iter():
+        allowed = SAFE_ATTRIBUTES.get(element.tag, {})
+        if element.tag == "img":
+          element.tag, element.text = "span", element.get("alt", "")
+        elif element.tag == "a" and not SAFE_LINK.fullmatch(
+            element.get("href", "")):
+          element.tag = "span"
+        for name in list(element.attrib):
+          if element.tag == "span" or name not in allowed or \
+              not allowed[name].fullmatch(element.get(name)):
+            del element.attrib[name]
+  def language_only(attrs):  # (id, classes, options) from a code header
+    classes = [v for k, v in attrs if k == "."][:1]
+    return "", [x for x in classes if LANGUAGE.fullmatch(x)], {}
   md = markdown.Markdown(extensions = list(extensions))
+  if "fenced_code" in extensions:  # fails if the step has another name
+    md.preprocessors["fenced_code_block"].handle_attrs = language_only
   md.preprocessors.deregister("html_block")
   md.inlinePatterns.deregister("html")
-  return md.convert(text)
+  md.treeprocessors.register(Safe(md), "safe", 0)  # after all the others
+  try:
+    return md.convert(text)
+  except RecursionError:  # nested too deeply for Python-Markdown: as text
+    return "<pre><code>%s\n</code></pre>" %html.escape(text)
+
+def heading(level, text, anchor):
+  """A heading with one of the page's own anchors"""
+  return '<h%d id="%s">%s</h%d>' %(level, anchor, html.escape(text), level)
 
 def convert(text):
-  body = markdown_text(text, ["tables", "fenced_code", "attr_list"])
+  body = markdown_text(text, ["tables", "fenced_code"])
   def block(m):  # colour added and removed lines in diffs
     out = []
     for x in m.group(2).split("\n"):
@@ -964,14 +1019,16 @@ def review_md(spec):
   else:
     summary = ("No outside review was run for this job; the report offers "
       "one.")
-  return "\n---\n\n## The outside review {#review}\n\n%s\n" %summary
+  return "<hr />" + heading(2, "The outside review", "review") + convert(
+    summary)
 
 def page(spec):
   ours, other = unpushed(spec)
   n_changes = len(spec["changes"])
   body = []
   # 1. A very brief summary: the result and what remains to do
-  top = "# %s {#top}\n\n%s\n" %(spec["title"], spec["result"])
+  title = heading(1, spec["title"], "top")
+  top = "%s\n" %spec["result"]
   n_uncommitted = len([c for c in spec["changes"] if is_uncommitted(c)])
   n_saved = len([c for c in spec["changes"] if c.get("state") == "saved"])
   if n_saved:
@@ -993,7 +1050,7 @@ def page(spec):
         "(see the [complete list](#commits-to-push))" %len(other))
     top += text + ".\n"
   top += "\n## The changes\n"
-  body.append(convert(top))
+  body.append(title + convert(top))
   # 2. The changes: problem and result, from each description
   rows = []
   for c in spec["changes"]:
@@ -1013,7 +1070,7 @@ def page(spec):
   for c in spec["changes"]:
     k = c["number"]
     header, sections = read_description(spec, c)
-    md = ["\n## %d. %s\n" %(k, c["name"])]
+    md = [convert("## %d. %s" %(k, c["name"]))]  # HTML, in order
     for name in EXPLANATION:
       t, text = section_text(sections, name)
       if text is None:
@@ -1022,19 +1079,19 @@ def page(spec):
         text = changes_after_review(text)
         if text is None:
           continue
-        md.append("\n### Changes after the review {#%s}\n\n%s\n" %(
-          anchor(k, "after"), renumber(spec, text)))
+        md.append(heading(3, "Changes after the review", anchor(k, "after")) +
+          convert(renumber(spec, text)))
         continue
-      md.append("\n### %s\n\n%s\n" %(name if name.startswith("Fix") else t,
-        renumber(spec, text)))
+      md.append(convert("\n### %s\n\n%s\n" %(name if name.startswith("Fix")
+        else t, renumber(spec, text))))
     body.append('<section class="change" id="%s">%s<details class="evidence" '
       'id="%s"><summary>Show the full change, tests and results</summary>'
       '<div class="evidence-body">%s<button type="button" '
       'class="close-evidence">Close the evidence</button></div></details>'
-      '</section>\n' %(anchor(k), convert("".join(md)), anchor(k, "evidence"),
+      '</section>\n' %(anchor(k), "".join(md), anchor(k, "evidence"),
       convert(evidence_md(spec, c))))
   # 4. The AI analysis: the outside review and how the tests were run
-  body.append(convert(review_md(spec)))
+  body.append(review_md(spec))
   rows = [(f["found"], ", ".join(link("change %d" %k, k, "after")
     for k in f["changes"]), f["done"]) for f in spec.get("findings", [])]
   if rows:
@@ -1042,9 +1099,8 @@ def page(spec):
   body.append(convert("\n### How the changes were tested\n\n%s\n" %
     spec["old_code_note"]))
   # 5. The commits to push
-  md = ("\n---\n\n## Commits to push {#commits-to-push}\n\nPushing these "
-    "repositories publishes all of the commits below.\n")
-  body.append(convert(md))
+  body.append("<hr />" + heading(2, "Commits to push", "commits-to-push") +
+    convert("Pushing these repositories publishes all of the commits below."))
   if ours:
     body.append(convert("\n### From these %s (%d)\n" %("changes" if
       n_changes > 1 else "the change", len(ours))))
