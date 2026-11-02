@@ -1,4 +1,5 @@
-# Static checks of the GuidedCoding skill (tst_guided_coding.py), on Linux and macOS.
+# Checks of the GuidedCoding skill and its review tool (tst_guided_coding.py),
+# on Linux and macOS.
 
 name: tests
 on: [push, pull_request, workflow_dispatch]
@@ -16,5 +17,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # The page's Markdown safety tests need Python-Markdown; here only, in
+      #  CI, the version they were checked with is installed, and the tests
+      #  then refuse to skip them (GC_REQUIRE_MARKDOWN)
+      - name: Python-Markdown for the page tests
+        run: |
+          python -m pip install "markdown==3.10.3"
+          python -c "import markdown; print('markdown', markdown.__version__)"
       - name: Skill checks
+        env:
+          GC_REQUIRE_MARKDOWN: "1"
         run: python tst_guided_coding.py

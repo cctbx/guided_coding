@@ -3,7 +3,10 @@
 These commands start no coding job. Each one first finds the installation:
 
 - **The registration** is the `gc` link in the skills folder (`$CLAUDE_CONFIG_DIR/skills`, or else
-  `~/.claude/skills`).
+  `~/.claude/skills`), or, from an older installation, a `guided_coding` link there (README, "If you used the
+  earlier GuidedCoding kit"). Use the one that is a link to a `guided_coding/` folder whose `SKILL.md` begins
+  with `# GuidedCoding`. If both are such links, say so and ask which to keep; change nothing until the developer
+  answers.
 - **The copy** is the folder above the `guided_coding/` folder that link points to. It is a Git clone (in the home
   folder, or `modules/guided_coding` in a PHENIX installation) or a ZIP copy without Git history.
 - **The version** is the first heading of `SKILL.md` in the copy.

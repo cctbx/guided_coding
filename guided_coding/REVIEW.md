@@ -1,9 +1,10 @@
 # GuidedCoding review (version 1.5)
 
-The outside review and the developer's page (SKILL.md §3 and SKILL.md §5). Every job ends with the page; with an
-outside review, the developer first pastes one packet into the outside reviewer and its answer back here. Keep the work proportionate: one or two
-focused tests per change, the essential code only, a description as long as the change needs (a simple fix:
-150 to 250 words), and no step the developer does not need.
+The outside review and the developer's page (SKILL.md §3 and SKILL.md §5). Every job ends with the page (or,
+where the tools do not fit, the report of §4); with an outside review, the developer first pastes one packet into
+the outside reviewer and its answer back here. Keep the work proportionate: one or two focused tests per change,
+the essential code only, a description as long as the change needs (a simple fix: 150 to 250 words), and no step
+the developer does not need.
 
 ## 1. Prepare the review (after SKILL.md §2, before the report)
 
@@ -29,10 +30,13 @@ focused tests per change, the essential code only, a description as long as the 
   The old code is then exactly the code before the job, the developer's own earlier changes included. A change
   made of commits lists the commits.
 - **The tests.** For each change, the proving test and at most one more focused test, as `runs`. The proving test
-  gives `old_fails_with`: the text of the failure it must show on the old code, distinctive enough to tell
-  it from another failure (the assertion message, not only `AssertionError`). A test that starts a child process is `new_only` (the old-code replacement cannot reach it). A
-  changed file that is not Python (compiled code, data) goes under `not_reversed` with the reason; if the proof
-  needs its old version, use §4.
+  gives `old_fails_with`: text of the exception line that must end the old-code run (the last line of its
+  traceback), distinctive enough to tell it from another failure: the assertion message, not only
+  `AssertionError`. Text in the traceback's source lines does not count, so a bare `assert` with no message
+  cannot be checked by the tool: give the test's assertion a message, or verify the failure by hand (§4). A test
+  that starts a child process is `new_only` (the old-code replacement cannot reach it). A changed file that is
+  not Python (compiled code, data) goes under `not_reversed` with the reason; if the proof needs its old version,
+  use §4.
 - **Run the tools** (`${CLAUDE_SKILL_DIR}/tools/review_pages.py`, with that Python): `scope`, `packet`,
   `request`, then `check --before-review`. Fix every problem `check` reports before going on. It refuses a
   run that proves nothing: an old-code run that passes, fails while loading the old code or for an import or
@@ -93,15 +97,22 @@ focused tests per change, the essential code only, a description as long as the 
 ## 4. When the tools do not fit
 
 No Git, a proof that needs compiled code or other non-Python files in their old version, a test that needs its
-own command or working directory, or no `markdown` package: write `OUTSIDE_REVIEW.md` in the scratch folder and
-copy it to the hand-over folder. It holds the task as given, the full diff, the new tests and their output on the
-old and new code (the old code as SKILL.md §2 makes it: an isolated copy, or a swap where the notes allow it),
-for H the conditions that make the change hard, for Q the open question, and this request: "Review this change
-for correctness, unintended behaviour changes, and whether the tests prove the fix. List findings, most serious
-first." Leave out keys, tokens and user data, and name anything you removed. Say in it and in the report which
-evidence was made by hand. If the old code could not be run reliably, say so; never present it as checked.
-The developer pastes the file into the outside reviewer and the reply back; §2 applies, and the report replaces
-the page.
+own command or working directory, a failure the tools cannot tell apart (`check` says to verify it by hand), or no
+`markdown` package: make the evidence by hand, in the scratch folder. That a tool does not fit changes only how the
+evidence is made, not whether there is an outside review (SKILL.md §3 decides that, as before).
+
+- **With an outside review** (a trigger asks for one, the work is consequential, or the developer asked): write
+  `OUTSIDE_REVIEW.md` and copy it to the hand-over folder. It holds the task as given, the full diff, the new tests
+  and their output on the old and new code (the old code as SKILL.md §2 makes it: an isolated copy, or a swap
+  where the notes allow it), for H the conditions that make the change hard, for Q the open question, and this
+  request: "Review this change for correctness, unintended behaviour changes, and whether the tests prove the fix.
+  List findings, most serious first." Leave out keys, tokens and user data, and name anything you removed. The
+  developer pastes the file into the outside reviewer and the reply back; §2 applies.
+- **Without one:** no review file. The final report (SKILL.md §5) carries the same evidence in short: the diff, the
+  new tests and their output on the old and new code; it offers an outside review in one line.
+
+Either way, say in the report which evidence was made by hand. If the old code could not be run reliably, say so;
+never present it as checked. The report replaces the page.
 
 ---
 Version 1.5, 2026-11-01.

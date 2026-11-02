@@ -114,8 +114,44 @@ def review_tools():
   return ["review tools: " + f for f in tst_review_pages.run()]
 
 
+def uninstall_block():
+  """The README's Uninstall block, run in a temporary configuration folder:
+     it removes the one registration it finds, under either supported name,
+     and changes nothing when there are two"""
+  import shutil, subprocess, tempfile
+  if os.name != "posix":
+    return []
+  with open(os.path.join(HERE, "README.md")) as f:
+    readme = f.read()
+  part = readme[readme.index("### Uninstall"):]
+  block = part[part.index("sh <<'END'"):part.index("\nEND\n") + 5]
+  failures = []
+  for names in (["gc"], ["guided_coding"], ["gc", "guided_coding"]):
+    root = tempfile.mkdtemp()
+    try:
+      copy = os.path.join(root, "copy", "guided_coding")
+      os.makedirs(copy)
+      with open(os.path.join(copy, "SKILL.md"), "w") as f:
+        f.write("# GuidedCoding (version %s)\n" % VERSION)
+      skills = os.path.join(root, "config", "skills")
+      os.makedirs(skills)
+      for name in names:
+        os.symlink(copy, os.path.join(skills, name))
+      env = dict(os.environ, CLAUDE_CONFIG_DIR=os.path.join(root, "config"))
+      p = subprocess.run(["sh", "-c", block], env=env, stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT, universal_newlines=True)
+      left = sorted(os.listdir(skills))
+      if len(names) == 1 and (left or "Removed GuidedCoding" not in p.stdout):
+        failures.append("uninstall with the registration %s: left %s:\n%s" % (names[0], left, p.stdout))
+      if len(names) == 2 and (left != sorted(names) or "registered twice" not in p.stdout):
+        failures.append("uninstall with two registrations: left %s:\n%s" % (left, p.stdout))
+    finally:
+      shutil.rmtree(root)
+  return failures
+
+
 if __name__ == "__main__":
-  failures = run() + self_test() + review_tools()
+  failures = run() + self_test() + review_tools() + uninstall_block()
   for failure in failures:
     print("FAIL: " + failure)
   if failures:

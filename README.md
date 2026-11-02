@@ -24,8 +24,9 @@ your page; nothing is compiled or installed. Start with [`guided_coding/SKILL.md
 - **macOS or Linux.** GuidedCoding has been tested on macOS and Linux; it has not been tested on Windows.
 - **For the review packet and your page:** a Python 3 with the `markdown` package (Python-Markdown). PHENIX's
   `libtbx.python` has it. For another Python, add it for your user only with `python3 -m pip install --user markdown`
-  (GuidedCoding installs nothing itself). Without it, Claude writes the review file and the report by hand, and there
-  is no page. Opening a page needs only a web browser.
+  (GuidedCoding installs nothing itself). The page also needs a change whose tests the review tool can run (Python
+  code tested in the test's own process). Without either, Claude makes the evidence by hand and gives a written
+  report instead of the page; nothing else changes. Opening a page needs only a web browser.
 
 The review step uses Claude Code's code-review skill when it is available. To let Claude Code install GuidedCoding
 with you instead of running the commands yourself, see the website's
@@ -209,15 +210,18 @@ an installation made with Git, run `git pull` in its folder (`~/guided_coding`, 
 ### Uninstall
 
 Type `/gc uninstall` in Claude Code, or paste this block. It removes GuidedCoding from Claude Code: it removes only
-the `gc` link, so `/gc` stops working, and deletes nothing. It then tells you where GuidedCoding's files are and
+the registration link (`gc`, or `guided_coding` for an older registration), so `/gc` stops working, and deletes
+nothing. If both exist, it changes nothing and says so. It then tells you where GuidedCoding's files are and
 whether they hold anything of yours (changes, other files, commits that are not on GitHub, other branches or
 stashes). A copy under a `modules` folder (`modules/guided_coding`) may belong to a larger installation such as
 PHENIX, and stays. Project notes that `/gc setup` saved (`.claude/GC_NOTES.md` in your projects) are kept.
 
 ```
 sh <<'END'
-L="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills/gc"
-[ -L "$L" ] || { echo "GuidedCoding is not registered at $L; nothing changed."; exit 1; }
+S="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"; L=""; N=0
+for C in "$S/gc" "$S/guided_coding"; do if [ -L "$C" ]; then L="$C"; N=$((N+1)); fi; done
+[ "$N" -gt 0 ] || { echo "GuidedCoding is not registered at $S/gc or $S/guided_coding; nothing changed."; exit 1; }
+[ "$N" -eq 1 ] || { echo "GuidedCoding is registered twice, as $S/gc and $S/guided_coding; keep one (choose which yourself); nothing changed."; exit 1; }
 T="$(readlink "$L")"; case "$T" in /*) ;; *) T="$(dirname "$L")/$T";; esac
 COPY="$(dirname "$T")"
 [ "$(basename "$T")" = guided_coding ] || { echo "$L points to $T, not GuidedCoding; nothing changed."; exit 1; }

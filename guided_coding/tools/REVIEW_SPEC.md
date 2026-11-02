@@ -85,10 +85,12 @@ A review folder holds, for one job or one batch:
   shown only through its diff).
 - `runs`: each test run on the old and the current code. `new_only`: run on the current
   code only (a test that starts a child process, which the replacement cannot reach).
-  `old_fails_with`: text the old-code run must print after the test starts (at least one
-  run of each change has it): the assertion message or diagnostic, not only an exception
-  name, which `check` refuses as too general. Two runs of a change need different names
-  (`label`). `check` also requires each old-code run to have its
+  `old_fails_with`: text of the exception line that must end the old-code run, the last
+  line of its traceback (at least one run of each change has it): the assertion message or
+  diagnostic, not only an exception name, which `check` refuses as too general. Text printed
+  earlier, or shown in the traceback's source lines, does not count; a run that does not end
+  with a one-line exception with a message needs hand verification (REVIEW.md §4). Two runs
+  of a change need different names (`label`). `check` also requires each old-code run to have its
   current-code run, to have used the old version of every changed module, and the
   current-code runs to import the changed modules from the checkout.
 - `ref`: the change's number in the full list of the job or batch; a description may

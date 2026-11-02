@@ -200,7 +200,8 @@ possible, and that the result can be trusted.
   line, and the developer may ask for it at any time. It then follows REVIEW.md as for the triggers.
 - **Every job: the developer's page.** With or without an outside review, the job ends with the page of REVIEW.md §3,
   which shows the change, its code and its evidence. Without a review, prepare it as REVIEW.md §1 says but make no
-  packet for a reviewer (REVIEW.md §1, "No outside review").
+  packet for a reviewer (REVIEW.md §1, "No outside review"). Where the tools do not fit (REVIEW.md §4), the
+  report takes the page's place; that alone does not add or remove an outside review.
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
 - **Finish before you report.** If you start a long test or build, wait for it to finish (or stop it) before writing
   any outside-review file and the final report. Leave nothing this job started running in the background. The final
@@ -282,7 +283,8 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
 
 ## 5. Final report (this form, nothing longer)
 
-Every job ends with the developer's page (§3, REVIEW.md §3). With an outside review, the developer first sees only
+Every job ends with the developer's page (§3, REVIEW.md §3), or where the tools do not fit, with this report
+(REVIEW.md §4). With an outside review, the developer first sees only
 the short message of REVIEW.md §1, and the page after the review. The report below is still written and saved, and
 the page's message gives its path.
 

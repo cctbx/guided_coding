@@ -71,6 +71,7 @@ BUILD_NOTE = ("Old-code runs replace only the changed Python modules listed "
   "current build and checkout.")
 
 TEST_STARTED = "TEST STARTED"  # the runner's marker: replacements loaded
+MIXED = "MIXED CODE:"  # the runner's refusal: old and current code would mix
 
 RUNNER = '''
 import importlib.util, os, runpy, sys
@@ -79,6 +80,14 @@ for root in %(roots)r:     # so the old modules' packages can be imported
   if root not in sys.path:
     sys.path.append(root)
 for name, old_file, real_file in sorted(overlays, key = lambda x: x[0].count(".")):
+  # A changed module already imported (by an old module loaded before it)
+  #  is the current version, and what imported it keeps that version: the
+  #  run would mix old and current code, so it stops here
+  if name in sys.modules:
+    print("%(mixed)s %%s was imported from %%s before its old version could "
+      "be loaded; this run would mix old and current code"
+      %%(name, getattr(sys.modules[name], "__file__", None)), flush = True)
+    sys.exit(3)
   kw = {}
   if os.path.basename(real_file) == "__init__.py":
     kw["submodule_search_locations"] = [os.path.dirname(real_file)]
@@ -361,7 +370,7 @@ def packet(spec, change):
         f.write(RUNNER %dict(overlays = overlays if label == "old" else [],
           test = test_path, args = list(run.get("args", [])),
           roots = sorted(set(os.path.join(modules, part["repo"])
-            for part in change["parts"])), started = TEST_STARTED,
+            for part in change["parts"])), started = TEST_STARTED, mixed = MIXED,
           real_files = [os.path.realpath(x[2]) for x in overlays],
           module_names = [x[0] for x in overlays],
           is_old = (label == "old")))
@@ -1247,6 +1256,21 @@ def loaded(text):
       out[name] = f
   return out
 
+EXCEPTION_LINE = re.compile(r"[A-Za-z_][\w.]*(: .*)?$")
+
+def ending_exception(output):
+  """The exception line that ended a run: the last line, when it follows a
+     "Traceback (most recent call last):" and reads as one (a name and an
+     optional message on one line); otherwise None. Source lines shown in
+     the traceback are not part of it"""
+  lines = [x for x in output.splitlines() if x.strip() and
+    not x.startswith(("LOADED:", "WARNING:"))]
+  if not any(x.startswith("Traceback (most recent call last):")
+      for x in lines) or not EXCEPTION_LINE.match(lines[-1]) or \
+      lines[-1].startswith(" "):
+    return None
+  return lines[-1]
+
 def run_problems(spec, change, p):
   """Why the runs of one change might not prove it"""
   problems = []
@@ -1309,6 +1333,11 @@ def run_problems(spec, change, p):
     if code_ == 0:
       problems.append("%s passed on the old code (it must fail)" %name)
       continue
+    if "\n" + MIXED in t:
+      problems.append("%s: %s Use an isolated copy of the old code (SKILL.md "
+        "§2) or the hand-made evidence of REVIEW.md §4" %(name, [x for x in
+        t.splitlines() if x.startswith(MIXED)][0]))
+      continue
     before, started, after = t.partition("\n" + TEST_STARTED + "\n")
     if not started:
       problems.append("%s failed before the test started (loading the old "
@@ -1330,9 +1359,17 @@ def run_problems(spec, change, p):
       problems.append("%s: old_fails_with \"%s\" is too general; give the "
         "assertion message or diagnostic" %(name, expected))
     elif expected:
-      if expected not in after:
-        problems.append("%s did not fail with the expected \"%s\"" %(name,
-          expected))
+      # Only the exception that ended the run counts: not text printed
+      #  earlier, nor source lines shown in its traceback
+      failure = ending_exception(after)
+      if failure is None or ": " not in failure:
+        problems.append("%s: the old-code run did not end with a one-line "
+          "Python exception with a message (it ended with: %s), so check "
+          "cannot tell whether it failed in the expected way; verify that by "
+          "hand (REVIEW.md §4)" %(name, (failure or "no exception")[:80]))
+      elif expected not in failure:
+        problems.append("%s did not fail with the expected \"%s\" (it ended "
+          "with: %s)" %(name, expected, failure[:80]))
       else:
         proving += 1
   if not proving:

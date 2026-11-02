@@ -42,6 +42,10 @@ PAGE = """<nav class="bar"></nav><main><h1 id="top">Demo</h1>
 <h2 id="review">The outside review</h2>
 <h2 id="commits-to-push">Commits to push</h2></main><script></script>"""
 
+# The end of a Python traceback, as a failing test prints it
+TRACEBACK = ('Traceback (most recent call last):\n  File "tst_thing.py", line 3,'
+  ' in <module>\n    assert thing([]) == [], "7/3"\n')
+
 def run_text(code, body, module_file):
   return "$ run\nexit code: %d\n\n%s\nLOADED: demo.thing from %s\n" %(code,
     body, module_file)
@@ -102,7 +106,8 @@ def make_folder(description = DESCRIPTION, page = PAGE, scope_ok = True,
     open(real, "a").write("# edited after the packet\n")
   summary = "old  exit %d  tst_thing_old  last line: x\n" %old_exit
   if old_body is None:
-    old_body = "%s\nTraceback\nAssertionError: 7/3" %review_pages.TEST_STARTED
+    old_body = "%s\n%sAssertionError: 7/3" %(review_pages.TEST_STARTED,
+      TRACEBACK)
   if warning:
     old_body += "\nWARNING: demo.thing loaded from the current file " + real
   open(os.path.join(packet, "runs", "tst_thing_old.txt"), "w").write(
@@ -319,8 +324,8 @@ def hostile_page_cases():
     ).replace("It checks for empty input first.", HOSTILE + "\n\n" +
     ">" * 500 + " deep") + "\n## Changes after the review\n- " + HOSTILE + "\n"
   folder = make_folder(description = description,
-    old_body = "%s\n%s\nAssertionError: 7/3" %(review_pages.TEST_STARTED,
-    HOSTILE))
+    old_body = "%s\n%s\n%sAssertionError: 7/3" %(review_pages.TEST_STARTED,
+    HOSTILE, TRACEBACK))
   saved = review_pages.unpushed
   try:
     spec = review_pages.load(folder)
@@ -393,8 +398,52 @@ def page_link_cases():
     shutil.rmtree(folder)
   return failures
 
+def mixed_runner_cases():
+  """The old-code runner, with two changed modules where the first imports a
+     value from the second: it must stop rather than run the test on a
+     mixture of old and current code"""
+  failures = []
+  folder = tempfile.mkdtemp()
+  try:
+    def write(path, text):
+      os.makedirs(os.path.dirname(path), exist_ok = True)
+      open(path, "w").write(text)
+    current = os.path.join(folder, "current")
+    old = os.path.join(folder, "old")
+    for root, value in ((current, "CURRENT"), (old, "OLD")):
+      write(os.path.join(root, "pkg", "__init__.py"), "")
+      write(os.path.join(root, "pkg", "a.py"),
+        "from pkg.b import value\ndef result():\n  return value\n")
+      write(os.path.join(root, "pkg", "b.py"), "value = %r\n" %value)
+    test = os.path.join(folder, "tst_mixed.py")
+    write(test, "import pkg.a, pkg.b\nprint('a gives', pkg.a.result(), "
+      "'b gives', pkg.b.value)\n")
+    overlays = [(m, os.path.join(old, "pkg", f), os.path.join(current, "pkg",
+      f)) for m, f in (("pkg.a", "a.py"), ("pkg.b", "b.py"))]
+    runner = os.path.join(folder, "runner.py")
+    write(runner, review_pages.RUNNER %dict(overlays = overlays, test = test,
+      args = [], roots = [current], started = review_pages.TEST_STARTED,
+      mixed = review_pages.MIXED, real_files = [os.path.realpath(x[2])
+      for x in overlays], module_names = [x[0] for x in overlays],
+      is_old = True))
+    import subprocess
+    p = subprocess.run([sys.executable, runner], cwd = folder,
+      stdout = subprocess.PIPE, stderr = subprocess.STDOUT,
+      universal_newlines = True)
+    if p.returncode == 0 or review_pages.MIXED not in p.stdout or \
+        review_pages.TEST_STARTED in p.stdout or "a gives" in p.stdout:
+      failures.append("mixed old and current code was not refused (exit %d):"
+        "\n%s" %(p.returncode, p.stdout))
+  finally:
+    shutil.rmtree(folder)
+  return failures
+
 def run():
   failures = []
+  # In CI the page tests must run, not be skipped
+  if os.environ.get("GC_REQUIRE_MARKDOWN") and not has_markdown():
+    failures.append("GC_REQUIRE_MARKDOWN is set, but this Python has no "
+      "markdown package, so the page's safety tests would be skipped")
   ok = problems_of()
   if ok:
     failures.append("a complete review was refused: %s" %ok)
@@ -414,8 +463,32 @@ def run():
      dict(old_body = "Traceback\nValueError: bad"),
      "failed before the test started"),
     ("an old-code run that failed on another assertion",
-     dict(old_body = review_pages.TEST_STARTED + "\nAssertionError: 1/2"),
-     "did not fail with the expected"),
+     dict(old_body = "%s\n%sAssertionError: 1/2" %(review_pages.TEST_STARTED,
+       TRACEBACK)), "did not fail with the expected"),
+    ("the expected text printed, then another failure ending the run",
+     dict(old_body = "%s\nExpected diagnostic: AssertionError: 7/3\n"
+       "%sRuntimeError: unrelated failure" %(review_pages.TEST_STARTED,
+       TRACEBACK)), "did not fail with the expected"),
+    ("the expected text in a source line of the traceback, and another "
+     "exception ending the run",
+     dict(old_body = '%s\nTraceback (most recent call last):\n  File '
+       '"tst_thing.py", line 4, in <module>\n    check_result("AssertionError:'
+       ' 7/3")\n  File "tst_thing.py", line 2, in check_result\n    raise '
+       'RuntimeError("unrelated failure")\nRuntimeError: unrelated failure'
+       %review_pages.TEST_STARTED), "did not fail with the expected"),
+    ("a bare exception, with the expected text only in its source line",
+     dict(old_body = '%s\nTraceback (most recent call last):\n  File '
+       '"tst_thing.py", line 4, in <module>\n    assert thing([]) == [], '
+       '"7/3"\nAssertionError' %review_pages.TEST_STARTED),
+     "verify that by hand"),
+    ("the expected text printed, and no traceback ending the run",
+     dict(old_body = "%s\nAssertionError: 7/3\nFAILED" %
+       review_pages.TEST_STARTED), "did not end with a one-line"),
+    ("an old-code run stopped because old and current code would mix",
+     dict(old_exit = 3, old_body = "%s demo.other was imported from "
+       "/current/demo/other.py before its old version could be loaded; this "
+       "run would mix old and current code" %review_pages.MIXED),
+     "would mix old and current code"),
     ("no run with an expected old-code failure", dict(expected = None),
      "no proving run"),
     ("an old-code run without its run on the current code",
@@ -521,6 +594,7 @@ def run():
   finally:
     shutil.rmtree(folder)
   failures.extend(saved_copy_cases())
+  failures.extend(mixed_runner_cases())
   failures.extend(markdown_cases())
   failures.extend(dependency_cases())
   failures.extend(hostile_page_cases())
