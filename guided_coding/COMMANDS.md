@@ -13,7 +13,8 @@ Follow SKILL.md §0 for files and steps you give the developer.
 ## 1. help (also `/gc` alone)
 
 In a few lines, say what GuidedCoding does: one bounded change, a proving test, one review pass, an outside review
-for hard or consequential changes, extra checks only when triggered, and a short report. Give the version and where
+for hard or consequential changes, extra checks only when triggered, and one page at the end showing the change and
+its evidence. Give the version and where
 the copy is. List the commands in one line each:
 
 - `/gc <task>`: do one bug fix or bounded change;

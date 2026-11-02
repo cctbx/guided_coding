@@ -1,10 +1,14 @@
-# The evidence behind GuidedCoding (version 1.4)
+# The evidence behind GuidedCoding (version 1.5)
 
 The full report of the replay study, with every figure traced to its source, can be downloaded:
 [the final report](https://www.thomasterwilliger.org/guided_coding/GuidedCoding_study_final_report.md) (Markdown, about 185 KB). In it the earlier kit is called GuidedCoding Plus
 (GC+); the cited source files are available on request.
 
 ## What the evidence says about `/gc` as now written
+
+Version 1.5 runs the same steps as 1.4; it changes how the outside review is prepared (one packet, built and
+checked by a tool) and how the result is shown (one page for every job). The table below is about those steps, as
+adopted in 1.4.
 
 `/gc` version 1.4 keeps the steps the replay study found to help, drops or makes optional those that showed no clear
 benefit, narrows the one that probably hurt (estimated, not tested), and keeps a few safety steps that were not measured. Figures are major errors left
@@ -142,6 +146,17 @@ point.
 
 What the first runs changed: a session must finish (or stop) any long test before writing the review file and the
 report, and leave nothing running; and the narrowed scope rule replaced the strict one before the second runs.
+
+## Trials of version 1.5 (2026-11-01 and 02)
+
+Three real bug fixes in cctbx, each started in a new session from a short user-style description (the symptom only).
+An implementation check of the new packet and page, not a measurement.
+
+| job | result |
+|---|---|
+| a bare assertion when a full-cell map in P212121 is given a larger grid | trigger H; the proving test failed on the old code with the user's assertion and passed on the new; two outside reviews ("fix first", then "use as is"); the first found a separate, older defect in the boxing code, which became the second job. The developer: the hand-overs were smooth, the reviewer asked for no missing files, and the page was clear |
+| boxing past a map's edge lost the last plane of grid points | a one-character fix, tested in all 230 space groups; it ended its turn with a report-like summary while its test suites still ran, and named its trigger late. Changed: a waiting message says only what is running and about how long it takes, and the triggers are named in the first message |
+| a box overlapping a map by one plane came out all zeros | no trigger (a routine one-path fix), so in 1.5 as first written it made no page, and its report showed no code or diff and could not be opened from the app. Changed: every job ends with the page, and `check` refuses a page without an outside review unless the job recorded that none was needed |
 
 ## Behaviour checks of revision 22
 

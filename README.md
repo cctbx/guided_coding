@@ -4,14 +4,17 @@ GuidedCoding is a Claude Code skill, `/gc`, for making a bug fix or a bounded ch
 your attention:
 - a test that proves the fix;
 - one review pass;
-- an outside review by another AI assistant for hard or consequential changes, and on request;
+- an outside review by another AI assistant for hard or consequential changes, and on request: Claude puts one
+  review packet on your clipboard, you paste it into the other assistant and paste its answer back;
 - extra checks only when a change needs them (a live call, a run on another platform);
-- a short report.
+- one page for you at the end of every job: what was wrong and what is true now, the change and its code, the tests
+  on the old and new code, the outside review if there was one, and the commits a push would publish.
 
 `/gc batch` runs a supervised list of such jobs one at a time.
 
-The skill is the [`guided_coding/`](guided_coding) folder. It is a set of instructions for Claude, with no code to
-install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
+The skill is the [`guided_coding/`](guided_coding) folder. It is a set of instructions for Claude, plus one Python
+script (`guided_coding/tools/review_pages.py`) that Claude runs to build the review packet and
+your page; nothing is compiled or installed. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
 
 ## Requirements
 
@@ -19,6 +22,10 @@ install. Start with [`guided_coding/SKILL.md`](guided_coding/SKILL.md).
   [Anthropic's Claude Code quickstart](https://code.claude.com/docs/en/quickstart) first.
 - **Git,** unless you install from the ZIP download.
 - **macOS or Linux.** GuidedCoding has been tested on macOS and Linux; it has not been tested on Windows.
+- **For the review packet and your page:** a Python 3 with the `markdown` package (Python-Markdown). PHENIX's
+  `libtbx.python` has it. For another Python, add it for your user only with `python3 -m pip install --user markdown`
+  (GuidedCoding installs nothing itself). Without it, Claude writes the review file and the report by hand, and there
+  is no page. Opening a page needs only a web browser.
 
 The review step uses Claude Code's code-review skill when it is available. To let Claude Code install GuidedCoding
 with you instead of running the commands yourself, see the website's
@@ -178,8 +185,8 @@ END
 ```
 
 Each block ends by showing the link and the version line of the skill it registered,
-`# GuidedCoding (version 1.4)`, and what to do next. The blocks register only that version
-(`VERSION=1.4` in each block).
+`# GuidedCoding (version 1.5)`, and what to do next. The blocks register only that version
+(`VERSION=1.5` in each block).
 
 **Then** start a new Claude Code conversation in the folder of a software project, and type `/gc` followed by a small
 task (or `/gc help` for an introduction and the list of commands: `setup`, `batch`, `history`, `undo`, `update`,
@@ -259,11 +266,12 @@ block says it holds something of yours.
 In a replay of 37 past bug-fix jobs in PHENIX and cctbx, adding one review pass to plain Claude Code cut missed
 program errors per job from 0.81 to 0.47. GuidedCoding always includes that review pass, which is the main reason to
 expect it to do better than plain Claude Code; it has not been shown to do better than Claude Code with one review. On 18 harder jobs (selected, not a random sample), an outside review by
-another AI assistant removed further major errors when added to GuidedCoding, narrowly. Version 1.4 keeps those two
+another AI assistant removed further major errors when added to GuidedCoding, narrowly. Version 1.4 kept those two
 steps (the outside review for hard or consequential changes) and a test that proves the fix; it does not include a
 second review pass, keeps the independent reviewer optional, and narrows a strict scope rule that probably cost errors.
-GuidedCoding 1.4 as a whole has not itself been measured; it was checked in a small trial and is being evaluated in
-real use. [EVIDENCE.md](EVIDENCE.md) goes through each part of `/gc` and what the evidence says about it.
+Version 1.5 keeps the same steps and changes how the outside review is prepared and how the result is shown to you
+(the packet and the page). Neither version as a whole has itself been measured; 1.5 was tried on three real jobs and
+is being evaluated in real use. [EVIDENCE.md](EVIDENCE.md) goes through each part of `/gc` and what the evidence says about it.
 
 ## If you used the earlier GuidedCoding kit (revision 21 or older)
 
@@ -310,5 +318,8 @@ python3 tst_guided_coding.py
 
 It checks that the skill's files are present and consistent: the frontmatter, the cross-references between files
 (including section references into other files), and the version lines. It includes a check of its own that a
-broken cross-file reference is caught. It does not check whether Claude follows the procedure; that is checked by
+broken cross-file reference is caught, and the tests of the review tool (`guided_coding/tools/tst_review_pages.py`):
+that its checker refuses incomplete or unconvincing evidence, and that the page keeps untrusted text safe. The page's
+safety depends on how Python-Markdown is configured and on one of its internal steps, so run the tests again (with
+`libtbx.python` in PHENIX) after upgrading Python-Markdown or changing its extensions. It does not check whether Claude follows the procedure; that is checked by
 running it in Claude Code, and the recorded runs are listed in [EVIDENCE.md](EVIDENCE.md).
