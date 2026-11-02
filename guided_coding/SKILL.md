@@ -65,7 +65,9 @@ possible, and that the result can be trusted.
 
 ## 1. Start
 
-- **Restate the task** in one or two sentences. Name the triggers that apply, or say "no triggers".
+- **Restate the task** in one or two sentences, in your first message, before any other work. Name the triggers
+  that apply, or say "no triggers"; if some cannot be judged before reading the code, say so. Name a trigger as
+  soon as you see that it applies.
 - **Record the starting point.** For each repository you will touch, note the starting commit
   (`git rev-parse HEAD`) and `git status --short`. The job log keeps them for `/gc undo`.
 - **No Git?** If the project is not in a Git repository, say so once before starting. GuidedCoding works without
@@ -199,7 +201,11 @@ possible, and that the result can be trusted.
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
 - **Finish before you report.** If you start a long test or build, wait for it to finish (or stop it) before writing
   any outside-review file and the final report. Leave nothing this job started running in the background. The final
-  report is your last message.
+  report is your last message (followed only by the page link, §5).
+- **Whenever you stop before the job is done,** say in one or two lines what is going on and what you are waiting
+  for. For a long run, say about how long it may take (from earlier runs of the same tests), or that you do not
+  know; for the developer, say what answer you need. A waiting message is not a report: give no summary of the
+  work yet. This does not limit what a question to the developer, or the hand-over of REVIEW.md §1, must say.
 - **When the output or the outside review comes back,** treat each problem or finding as in §2 (for the outside
   review, as REVIEW.md §2 says), and update the report. If the developer skips a step, the report says "<step>: skipped by the developer". Skipping counts as
   accepting the uncertainty.
@@ -310,7 +316,8 @@ If it is not, list it under Not checked.
 
 End the report with one line: "To examine how to undo this job, type `/gc undo`." Save a copy of the report in the
 hand-over folder (§0) as `GC_REPORT_<short task>_<YYYY-MM-DD-HHMM>.md` (never overwriting one already there), and
-give its full path.
+give its full path. With a review page (REVIEW.md §3), the job's last message ends with the page's link (or full
+path) once more, as its very last line, after that undo line, so that the developer finds it at the very end.
 
 ## 6. Job log
 
