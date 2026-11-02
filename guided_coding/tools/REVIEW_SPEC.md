@@ -25,7 +25,8 @@ A review folder holds, for one job or one batch:
   "title": "Five changes reviewed",
   "page_title": "Five Changes Reviewed",
   "result": "**All five accepted.** ... (written after the outside review)",
-  "review_summary": "One or two sentences on the outside review.",
+  "review_summary": "One or two sentences on the outside review (left out when there was none)",
+  "triggers": ["H"],
   "old_code_note": "How the old-code runs were made (any change reversed with another).",
   "baselines": {"cctbx_project": "<commit>^"},
   "excluded": {"<commit>": "why it is not part of the review"},
@@ -60,6 +61,9 @@ A review folder holds, for one job or one batch:
 }
 ```
 
+- `triggers`: every reason the job needs an outside review: its triggers (SKILL.md §1), and
+  `"consequential"` or `"requested"` (the developer asked for one) where they apply; `[]` for none. A page without `review_summary`
+  (no outside review) is refused unless `triggers` is `[]`; an empty `review_summary` is refused.
 - `commits`: a list, not a range, so that other changes' commits in between are left out.
 - `"uncommitted": true` (instead of `commits`), with `"before"`: the change is still in
   the working tree, as it is during a GuidedCoding job before the developer asks for a

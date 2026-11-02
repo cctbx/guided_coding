@@ -198,6 +198,9 @@ possible, and that the result can be trusted.
   tokens and user data, and name anything you removed.
 - **An outside review on request.** For any other job, the outside review is optional: the report offers it in one
   line, and the developer may ask for it at any time. It then follows REVIEW.md as for the triggers.
+- **Every job: the developer's page.** With or without an outside review, the job ends with the page of REVIEW.md §3,
+  which shows the change, its code and its evidence. Without a review, prepare it as REVIEW.md §1 says but make no
+  packet for a reviewer (REVIEW.md §1, "No outside review").
 - **When a step cannot be finished now,** finish everything else and mark the step as pending in the report.
 - **Finish before you report.** If you start a long test or build, wait for it to finish (or stop it) before writing
   any outside-review file and the final report. Leave nothing this job started running in the background. The final
@@ -279,8 +282,9 @@ different and rarer thing: it also needs a plan, a recovery step and an outside 
 
 ## 5. Final report (this form, nothing longer)
 
-With an outside review (§3), the developer first sees only the short message of REVIEW.md §1, and after the review
-the page of REVIEW.md §3; the report below is still written and saved, and the page's message gives its path.
+Every job ends with the developer's page (§3, REVIEW.md §3). With an outside review, the developer first sees only
+the short message of REVIEW.md §1, and the page after the review. The report below is still written and saved, and
+the page's message gives its path.
 
 - **Ready to use:** yes, or no. Say no while a step is pending, an essential check fails, or an important correctness
   finding is unresolved. List what is open and explain the consequence. Name exactly what the developer accepted or
@@ -316,8 +320,14 @@ If it is not, list it under Not checked.
 
 End the report with one line: "To examine how to undo this job, type `/gc undo`." Save a copy of the report in the
 hand-over folder (§0) as `GC_REPORT_<short task>_<YYYY-MM-DD-HHMM>.md` (never overwriting one already there), and
-give its full path. With a review page (REVIEW.md §3), the job's last message ends with the page's link (or full
-path) once more, as its very last line, after that undo line, so that the developer finds it at the very end.
+give its full path. The job's last message then ends with its hand-over, so that the developer finds it at the
+very end:
+- **With a page,** the page's link (or full path) once more, as the very last line, after that undo line.
+- **Without a page** (REVIEW.md §4), the report in a form the developer can open from where they read your messages,
+  as the last thing in the message. In an app that opens only files in the session's own folders (as the Claude
+  desktop app does), copy it to the session's scratchpad and send that copy with the app's file tool; where there
+  is no such tool, give the path of a copy the developer can open. A link to a path the app cannot open is not a
+  hand-over.
 
 ## 6. Job log
 

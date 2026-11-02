@@ -1,7 +1,7 @@
 # GuidedCoding review (version 1.5)
 
-The outside review and the developer's page (SKILL.md §3 and SKILL.md §5). The developer pastes one packet into the
-outside reviewer and its answer back here, then reads one page. Keep the work proportionate: one or two
+The outside review and the developer's page (SKILL.md §3 and SKILL.md §5). Every job ends with the page; with an
+outside review, the developer first pastes one packet into the outside reviewer and its answer back here. Keep the work proportionate: one or two
 focused tests per change, the essential code only, a description as long as the change needs (a simple fix:
 150 to 250 words), and no step the developer does not need.
 
@@ -11,6 +11,8 @@ focused tests per change, the essential code only, a description as long as the 
   proving tests that run the changed Python code in the test's own process. If not, use §4 instead.
 - **The review folder.** In the scratch folder (SKILL.md §2), `review/`. It holds `review.json`, one description per
   change, and what the tools write (`evidence/`, `out/`). Format: `${CLAUDE_SKILL_DIR}/tools/REVIEW_SPEC.md`.
+- **The triggers** go into `triggers`: every reason for an outside review, including `"consequential"` for
+  consequential work and `"requested"` when the developer asked for one; `[]` for none.
 - **The settings** in `review.json` come from the project notes: the folder holding the repositories, the
   Python that runs the tests, a folder to add to PATH for git if any, the repositories, the upstream branch,
   the name of the full test. Without notes, find them from the project and say once that `/gc setup` would
@@ -44,6 +46,12 @@ focused tests per change, the essential code only, a description as long as the 
   and passes on the new, nothing is committed, and the packet is on the clipboard to paste into the outside
   reviewer the notes name (ChatGPT by default), with its answer pasted back here. Show nothing else yet.
   `request` warns when a packet is over 200 KB; then review fewer changes at a time.
+- **No outside review** (no trigger asks for one, the work is not consequential, and the developer has not
+  asked): run `scope`, `packet` (it makes the evidence for the page; nothing goes to a reviewer) and
+  `check --before-review`, but not `request`, and go straight to §3. Give `"triggers": []` and leave out
+  `review_summary` and `findings`; the page then says that no outside review was run and that the report offers
+  one. `check` refuses a page without a review for a job with triggers. `result` says the change is ready and
+  what remains.
 
 ## 2. When the answer comes back
 
@@ -78,7 +86,8 @@ focused tests per change, the essential code only, a description as long as the 
   would publish), then the changes, each explained with its evidence folded underneath, then the outside
   review and how the tests were run, then the commits. It shows no summary of a change except its
   `Problem:` and `Now:` lines. Design for a desktop screen.
-- **The process report** (SKILL.md §5) is still written and saved; the page's message gives its path.
+- **The process report** (SKILL.md §5) is still written and saved; the page's message gives its path. Without
+  an outside review, the page's message also offers one in a line.
 
 ## 4. When the tools do not fit
 

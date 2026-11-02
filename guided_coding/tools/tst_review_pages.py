@@ -301,6 +301,40 @@ def run():
       failures.append("wrong refusal for two runs named alike: %s" %e)
   finally:
     shutil.rmtree(folder)
+  # A job without an outside review still gets the review part, saying so
+  folder = make_folder()
+  try:
+    spec = review_pages.load(folder)
+    del spec["review_summary"]
+    md = review_pages.review_md(spec)
+    if "{#review}" not in md or "No outside review" not in md:
+      failures.append("a page without an outside review: %s" %md)
+    # Allowed only when the job named no triggers; refused for H, for no
+    #  triggers given, and for an empty review_summary
+    spec["triggers"] = []
+    found = review_pages.check(spec)
+    if found:
+      failures.append("a job with no triggers and no review was refused: %s"
+        %found)
+    for triggers in (["H"], None):
+      spec["triggers"] = triggers
+      if triggers is None:
+        del spec["triggers"]
+      if not [p for p in review_pages.check(spec) if "triggers" in p]:
+        failures.append("no outside review with triggers %s was not refused"
+          %triggers)
+      # Before the review, a job with a trigger has no review yet: allowed
+      found = review_pages.check(spec, before_review = True)
+      if found:
+        failures.append("check --before-review refused a job with triggers "
+          "%s that has no review yet: %s" %(triggers, found))
+    for empty in (" ", None):
+      spec["review_summary"] = empty
+      if not [p for p in review_pages.check(spec)
+          if "empty review_summary" in p]:
+        failures.append("an empty review_summary (%r) was not refused" %empty)
+  finally:
+    shutil.rmtree(folder)
   failures.extend(saved_copy_cases())
   failures.extend(markdown_cases())
   return failures

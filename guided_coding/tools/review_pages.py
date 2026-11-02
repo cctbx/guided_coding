@@ -956,6 +956,16 @@ def table(css_class, headers, rows):
 # ---------------------------------------------------------------------------
 # page: the developer's one page
 
+def review_md(spec):
+  """The outside review's heading and summary; a job without an outside
+     review says so"""
+  if "review_summary" in spec:
+    summary = spec["review_summary"]
+  else:
+    summary = ("No outside review was run for this job; the report offers "
+      "one.")
+  return "\n---\n\n## The outside review {#review}\n\n%s\n" %summary
+
 def page(spec):
   ours, other = unpushed(spec)
   n_changes = len(spec["changes"])
@@ -965,7 +975,7 @@ def page(spec):
   n_uncommitted = len([c for c in spec["changes"] if is_uncommitted(c)])
   n_saved = len([c for c in spec["changes"] if c.get("state") == "saved"])
   if n_saved:
-    top += ("\n**Still to do:** the reviewed fixes are saved as patches, not "
+    top += ("\n**Still to do:** the fixes are saved as patches, not "
       "applied. Choose which to apply; they are applied together and their "
       "tests rerun on the combined code before anything is committed. After "
       "%s passes, push.\n" %spec["settings"]["full_test"])
@@ -1024,8 +1034,7 @@ def page(spec):
       '</section>\n' %(anchor(k), convert("".join(md)), anchor(k, "evidence"),
       convert(evidence_md(spec, c))))
   # 4. The AI analysis: the outside review and how the tests were run
-  md = "\n---\n\n## The outside review {#review}\n\n%s\n" %spec["review_summary"]
-  body.append(convert(md))
+  body.append(convert(review_md(spec)))
   rows = [(f["found"], ", ".join(link("change %d" %k, k, "after")
     for k in f["changes"]), f["done"]) for f in spec.get("findings", [])]
   if rows:
@@ -1045,7 +1054,7 @@ def page(spec):
     body.append(convert("\n### From other work, carried by the same pushes "
       "(%d)\n" %len(other)))
     body.append(table("commits", ["Repository", "Commit", "Work", "Subject"],
-      [(repo, "`%s`" %h, name or "not in a reviewed change", s)
+      [(repo, "`%s`" %h, name or "not a change on this page", s)
       for repo, h, name, s in other]))
   body.append(convert("\nFound with `git log %s..HEAD` in each repository "
     "when this page was made.\n" %spec["settings"]["upstream"]))
@@ -1340,6 +1349,15 @@ def check(spec, before_review = False):
         name, spec.get("not_secret", [])))
   if before_review:
     return problems
+  # A page without an outside review only for a job that said it needs none
+  if "review_summary" not in spec:
+    if spec.get("triggers") != []:
+      problems.append("no review_summary: a job without an outside review "
+        "must give \"triggers\": [] (triggers: %s)" %spec.get("triggers"))
+  elif not isinstance(spec["review_summary"], str) or \
+      not spec["review_summary"].strip():
+    problems.append("an empty review_summary (leave it out when there was "
+      "no outside review)")
   path = os.path.join(out_dir(spec), "page.html")
   if os.path.exists(path):
     t = open(path).read()
