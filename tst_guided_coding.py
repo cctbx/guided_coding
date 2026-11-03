@@ -79,6 +79,9 @@ def run():
   versions = re.findall(r"^\s*VERSION=(\S+)$", readme, re.M)
   if len(versions) != 4 or set(versions) != {VERSION}:
     failures.append("README.md: install blocks give VERSION=%s, expected %s in all four" % (versions, VERSION))
+  windows = re.findall(r'^\$Version = "(\S+)"$', readme, re.M)
+  if windows != [VERSION]:
+    failures.append("README.md: the Windows install block gives $Version = %s, expected %s once" % (windows, VERSION))
   # Version 1.4: six triggers, H among them, and H asks for the outside review (§3).
   skill = texts["SKILL.md"]
   if "The six triggers" not in skill:

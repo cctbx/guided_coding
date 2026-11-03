@@ -47,7 +47,8 @@ Then ask for the task.
 3. Run `git -C <copy> fetch`. Say how many commits the copy is behind `origin/master`, and the latest version line
    (`git -C <copy> show origin/master:guided_coding/SKILL.md`). If it is up to date, say so and stop.
 4. Ask once. If the developer agrees, run `git -C <copy> pull --ff-only`, and show the new version line.
-5. **A ZIP copy:** there is no Git history; give the README's ZIP update steps as commands.
+5. **A ZIP copy:** there is no Git history; give the README's ZIP update steps as commands. On Windows, give the
+   README's Windows update steps instead.
 6. Afterwards, say to start a new Claude Code conversation: this one still uses the old instructions.
 
 ## 4. undo
@@ -90,8 +91,13 @@ Your project notes are kept." Offer exactly two answers: "Yes, uninstall" and "N
 description. In the question and answers, say only what will happen; do not mention the README, the block or links.
 
 If the developer says yes:
-1. Run the Uninstall block from the README exactly as written. It removes /gc and deletes nothing.
+1. Run the Uninstall block from the README exactly as written. It removes /gc and deletes nothing. On Windows, run
+   the README's Windows uninstall block instead: save it unchanged to a `.ps1` file, run it with
+   `powershell -NoProfile -ExecutionPolicy Bypass -File` and that file's full path, then delete the file.
 2. Report in plain words: /gc is removed, where the files are, and what the block said about them.
-3. Unless the copy is under a `modules` folder, give the command that deletes the folder, for the developer to run
-   if they want: `rm -rf '<full path of the copy>'`, in its own block, with a `cd` line first (SKILL.md §0). If the
-   block said the folder holds something of theirs, say so next to the command. Do not run it yourself.
+3. Unless the copy is under a `modules` folder, say how to delete the folder, for the developer to do if they want.
+   Do not do it yourself.
+   - **macOS and Linux:** give the command `rm -rf '<full path of the copy>'`, in its own block, with a `cd` line
+     first (SKILL.md §0). If the block said the folder holds something of theirs, say so next to the command.
+   - **Windows:** name the folder to delete in File Explorer, and say that the Windows block does not check it for
+     files of theirs, so they should look inside first.

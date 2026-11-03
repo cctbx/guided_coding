@@ -21,12 +21,14 @@ your page; nothing is compiled or installed. Start with [`guided_coding/SKILL.md
 - **Claude Code.** If you do not have it yet, follow
   [Anthropic's Claude Code quickstart](https://code.claude.com/docs/en/quickstart) first.
 - **Git,** unless you install from the ZIP download.
-- **macOS or Linux.** GuidedCoding has been tested on macOS and Linux; it has not been tested on Windows.
+- **macOS, Linux or Windows.** GuidedCoding has been tested on macOS and Linux. On Windows, use the Windows block
+  below; it is newer and has had less testing.
 - **For the review packet and your page:** a Python 3 with the `markdown` package (Python-Markdown). PHENIX's
   `libtbx.python` has it. For another Python, add it for your user only with `python3 -m pip install --user markdown`
-  (GuidedCoding installs nothing itself). The page also needs a change whose tests the review tool can run (Python
-  code tested in the test's own process). Without either, Claude makes the evidence by hand and gives a written
-  report instead of the page; nothing else changes. Opening a page needs only a web browser.
+  (on Windows, `python -m pip install --user markdown`; GuidedCoding installs nothing itself). The page also needs
+  a change whose tests the review tool can run (Python code tested in the test's own process). Without either,
+  Claude makes the evidence by hand and gives a written report instead of the page; nothing else changes. Opening a
+  page needs only a web browser.
 
 The review step uses Claude Code's code-review skill when it is available. To let Claude Code install GuidedCoding
 with you instead of running the commands yourself, see the website's
@@ -38,7 +40,8 @@ Put the repository somewhere, then make a link from your Claude Code skills fold
 Open Terminal (on a Mac) or a terminal window (on Linux), paste a whole block, and press Return. The blocks are
 complete: copy each one whole, with no editing. They are for bash or zsh, the usual shells. If your shell is csh
 or tcsh, type `bash` first, and `exit` afterwards. They check before they change anything, and they stop on anything
-unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`.
+unexpected. If you set `CLAUDE_CONFIG_DIR`, they use that folder instead of `~/.claude`. On Windows, use the
+Windows block below instead of these.
 
 Most people should install GuidedCoding in their home folder, or in a folder where they keep software. This works
 with any project, including PHENIX. If you develop PHENIX, you can instead install it in your PHENIX installation,
@@ -185,6 +188,95 @@ mkdir -p "$(dirname "$DIR")" && mv "$1" "$DIR" && rmdir "$TMP" && mkdir -p "$SKI
 END
 ```
 
+**Windows: in your home folder, without Git.** Open **Windows PowerShell** (press the Windows key, type
+`PowerShell`, and open it; not Command Prompt). Paste the whole block below and press Enter; if the window is still
+waiting after the last line, press Enter once more. The block downloads
+[`guided_coding.zip`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip), checks it against the
+published [`guided_coding.zip.sha256`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256),
+unpacks it into `guided_coding` in your home folder (or the folder in `GC_DIR`; the block prints the folder it
+uses), and registers it with a directory junction, a kind of link that needs no special Windows setting and no
+administrator rights. Git is not needed. If you set `CLAUDE_CONFIG_DIR`, the block uses that folder instead of
+`.claude` in your home folder. Like the blocks above, it checks before it changes anything and stops on anything
+unexpected; if the registration fails, it removes the files it had just unpacked, so you can run it again. To put
+GuidedCoding somewhere else, first run this line in the same PowerShell window, with your folder in place of
+`C:\software` (a folder on this computer, not a network share; keep the quotes and the `\guided_coding` at the
+end), then paste the block:
+
+```
+$env:GC_DIR = "C:\software\guided_coding"
+```
+
+```
+& {
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
+$Version = "1.5"
+if ($env:CLAUDE_CONFIG_DIR) { $Skills = Join-Path $env:CLAUDE_CONFIG_DIR "skills" } else { $Skills = Join-Path (Join-Path $HOME ".claude") "skills" }
+if ($env:GC_DIR) { $Dir = $env:GC_DIR.TrimEnd([char[]]"\/") } else { $Dir = Join-Path $HOME "guided_coding" }
+if ($Dir.StartsWith("\\")) { "GC_DIR must be a folder on this computer, not on a network share (a junction cannot point to a share); nothing changed."; return }
+if ($Dir -notmatch '^[A-Za-z]:[\\/][^\\/]') { "GC_DIR must be a full path, such as $HOME\software\guided_coding; nothing changed."; return }
+"GuidedCoding folder: $Dir"
+foreach ($L in "gc", "guided_coding") {
+  $P = Join-Path $Skills $L
+  $I = Get-Item -LiteralPath $P -Force -ErrorAction SilentlyContinue
+  if ($I) { "$P already exists; nothing changed:"; "  $($I.FullName)  type: $($I.LinkType)  target: $($I.Target)"; "To update or move an existing installation, see Update."; return }
+}
+if (Get-Item -LiteralPath $Dir -Force -ErrorAction SilentlyContinue) { "$Dir already exists; nothing changed. To update a ZIP installation, see Update."; return }
+$Tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("guided_coding_" + [System.IO.Path]::GetRandomFileName())
+New-Item -ItemType Directory -Path $Tmp | Out-Null
+try {
+$Url = "https://www.thomasterwilliger.org/guided_coding/guided_coding.zip"
+$Zip = Join-Path $Tmp "guided_coding.zip"
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+Invoke-WebRequest -Uri $Url -OutFile $Zip -UseBasicParsing
+$Sum = (Invoke-WebRequest -Uri "$Url.sha256" -UseBasicParsing).Content
+if ($Sum -is [byte[]]) { $Sum = [System.Text.Encoding]::ASCII.GetString($Sum) }
+$Want = ($Sum -split "\s+")[0].ToLower()
+$Have = (Get-FileHash -LiteralPath $Zip -Algorithm SHA256).Hash.ToLower()
+if ($Want -ne $Have) { "guided_coding.zip does not match its published checksum; nothing changed."; Remove-Item -LiteralPath $Tmp -Recurse -Force; return }
+"guided_coding.zip: OK"
+$Unpacked = Join-Path $Tmp "unpacked"
+Expand-Archive -LiteralPath $Zip -DestinationPath $Unpacked
+} catch { "Could not download or unpack guided_coding.zip ($($_.Exception.Message)); nothing changed."; Remove-Item -LiteralPath $Tmp -Recurse -Force; return }
+$Top = @(Get-ChildItem -LiteralPath $Unpacked -Directory -Filter "guided_coding-*")
+if ($Top.Count -ne 1 -or -not (Test-Path -LiteralPath (Join-Path (Join-Path $Top[0].FullName "guided_coding") "SKILL.md"))) { "Unexpected ZIP contents; nothing changed."; Remove-Item -LiteralPath $Tmp -Recurse -Force; return }
+$Skill = Join-Path (Join-Path $Top[0].FullName "guided_coding") "SKILL.md"
+if (-not (Select-String -LiteralPath $Skill -Pattern ("^# GuidedCoding \(version " + [regex]::Escape($Version) + "\)$") -Quiet)) { "the ZIP's guided_coding/SKILL.md is not GuidedCoding $Version (it may be the earlier kit or an older version); nothing registered."; Remove-Item -LiteralPath $Tmp -Recurse -Force; return }
+$Link = Join-Path $Skills "gc"
+$Target = Join-Path $Dir "guided_coding"
+$Parent = Split-Path -Parent $Dir
+$Stage = Join-Path $Parent (".guided_coding_" + [System.IO.Path]::GetRandomFileName())
+$StageMade = $false; $DirMade = $false; $LinkMade = $false
+try {
+  if (-not (Test-Path -LiteralPath $Parent)) { New-Item -ItemType Directory -Path $Parent | Out-Null }
+  $StageMade = $true
+  Copy-Item -LiteralPath $Top[0].FullName -Destination $Stage -Recurse -Force
+  [System.IO.Directory]::Move($Stage, $Dir)
+  $DirMade = $true
+  if (-not (Test-Path -LiteralPath $Skills)) { New-Item -ItemType Directory -Path $Skills | Out-Null }
+  New-Item -ItemType Junction -Path $Link -Value $Target | Out-Null
+  $LinkMade = $true
+  $I = Get-Item -LiteralPath $Link -Force
+  if ($I.LinkType -ne "Junction" -or -not (Test-Path -LiteralPath (Join-Path $Link "SKILL.md"))) { throw "$Link was created but is not a junction to $Target" }
+} catch {
+  $Why = $_.Exception.Message
+  if ($LinkMade) { [System.IO.Directory]::Delete($Link) }
+  if ($DirMade) { Remove-Item -LiteralPath $Dir -Recurse -Force }
+  if ($StageMade -and (Test-Path -LiteralPath $Stage)) { Remove-Item -LiteralPath $Stage -Recurse -Force }
+  Remove-Item -LiteralPath $Tmp -Recurse -Force -ErrorAction SilentlyContinue
+  "Could not register GuidedCoding at $Link ($Why); nothing registered, and the files it unpacked were removed. Check that you can create folders in $Skills and in $Dir, then run this block again."
+  return
+}
+Remove-Item -LiteralPath $Tmp -Recurse -Force
+"Registered $($I.FullName)  type: $($I.LinkType)  target: $($I.Target)"
+(Select-String -LiteralPath (Join-Path $Target "SKILL.md") -Pattern "^# GuidedCoding" | Select-Object -First 1).Line
+"Done. Next: start a new Claude Code conversation in a project folder and type /gc followed by a small task. For a project you will use regularly, type /gc setup there once (recommended) to save its local defaults."
+}
+```
+
+Do not use the macOS and Linux blocks in Git Bash on Windows: there, `ln -s` makes a copy of the folder instead of a
+link, so `/gc` would work but `/gc update` would update the downloaded files and not the copy Claude Code uses.
+
 Each block ends by showing the link and the version line of the skill it registered,
 `# GuidedCoding (version 1.5)`, and what to do next. The blocks register only that version
 (`VERSION=1.5` in each block).
@@ -206,6 +298,9 @@ an installation made with Git, run `git pull` in its folder (`~/guided_coding`, 
 2. rename its folder (`~/guided_coding`, or the folder you chose) to keep it as a backup, outside the skills folder, so that only one registration remains
    (two skills named `gc` conflict);
 3. download the new ZIP and run the ZIP block again (after the `GC_DIR` line, if you chose a folder).
+
+On Windows: paste the Windows uninstall block below into PowerShell (it removes only the link), rename the folder to
+keep it as a backup, and paste the Windows install block again (after the `$env:GC_DIR` line, if you chose a folder).
 
 ### Uninstall
 
@@ -264,6 +359,31 @@ END
 
 To delete GuidedCoding's files too, delete the folder it names: `rm -rf <that folder>`. Check it first if the
 block says it holds something of yours.
+
+On Windows, paste this block into Windows PowerShell instead. It removes only the registration link (`gc`, or
+`guided_coding` for an older registration) and deletes nothing; it does not check whether the folder holds anything
+of yours, so look before you delete the folder. To delete GuidedCoding's files too, delete the folder it names in
+File Explorer.
+
+```
+& {
+$ErrorActionPreference = "Stop"
+if ($env:CLAUDE_CONFIG_DIR) { $Skills = Join-Path $env:CLAUDE_CONFIG_DIR "skills" } else { $Skills = Join-Path (Join-Path $HOME ".claude") "skills" }
+$Found = @()
+foreach ($L in "gc", "guided_coding") { $P = Join-Path $Skills $L; if (Get-Item -LiteralPath $P -Force -ErrorAction SilentlyContinue) { $Found += $P } }
+if ($Found.Count -eq 0) { "GuidedCoding is not registered at $Skills\gc or $Skills\guided_coding; nothing changed."; return }
+if ($Found.Count -gt 1) { "GuidedCoding is registered twice, as $Skills\gc and $Skills\guided_coding; keep one (choose which yourself); nothing changed."; return }
+$I = Get-Item -LiteralPath $Found[0] -Force
+if (-not $I.LinkType) { "$($I.FullName) is a folder, not a link, so it may hold GuidedCoding's only copy; nothing changed. If it is only a copy of another GuidedCoding folder, delete it yourself."; return }
+$T = "$($I.Target)"
+if ((Split-Path -Leaf $T) -ne "guided_coding") { "$($I.FullName) points to $T, not GuidedCoding; nothing changed."; return }
+if ((Test-Path -LiteralPath $T) -and -not (Select-String -LiteralPath (Join-Path $T "SKILL.md") -Pattern "^# GuidedCoding" -Quiet)) { "$($I.FullName) points to $T, which is not GuidedCoding; nothing changed."; return }
+try { [System.IO.Directory]::Delete($I.FullName) } catch { try { [System.IO.File]::Delete($I.FullName) } catch { } }
+if (Get-Item -LiteralPath $I.FullName -Force -ErrorAction SilentlyContinue) { "Could not remove $($I.FullName); nothing changed."; return }
+"Removed GuidedCoding from Claude Code; /gc stops working in new conversations."
+if (Test-Path -LiteralPath $T) { "Its files are still in $(Split-Path -Parent $T). Delete that folder yourself if you no longer need it." } else { "The link pointed to $T, which no longer exists; there are no files to delete." }
+}
+```
 
 ## What the evidence says
 
