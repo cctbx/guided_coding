@@ -131,7 +131,7 @@ fi; done
 if [ -e "$DIR" ]; then
   case "$(git -C "$DIR" remote get-url origin 2>/dev/null)" in https://github.com/cctbx/guided_coding|https://github.com/cctbx/guided_coding.git|git@github.com:cctbx/guided_coding|git@github.com:cctbx/guided_coding.git|ssh://git@github.com/cctbx/guided_coding|ssh://git@github.com/cctbx/guided_coding.git) echo "Using the existing $DIR";; *) echo "$DIR exists but is not a clone of https://github.com/cctbx/guided_coding; nothing changed."; exit 1;; esac
 else
-  git clone https://github.com/cctbx/guided_coding.git "$DIR" || exit 1
+  git clone https://github.com/cctbx/guided_coding.git "$DIR" || { echo "Could not clone into $DIR; nothing changed. If git said Permission denied (for example in a PHENIX binary installation), see 'In a PHENIX binary installation' under 'If you used the earlier GuidedCoding kit'."; exit 1; }
 fi
 grep -qx "# GuidedCoding (version $VERSION)" "$DIR/guided_coding/SKILL.md" 2>/dev/null || { echo "$DIR/guided_coding/SKILL.md is not GuidedCoding $VERSION (it may be the earlier kit or an older version; run git pull there); nothing registered."; exit 1; }
 if [ -n "$OLD" ]; then OLDT="$(readlink "$OLD")"; rm "$OLD" || { echo "Could not remove the earlier kit's registration $OLD; nothing changed."; exit 1; }; echo "Removed the earlier kit's registration $OLD (it pointed to $OLDT)."; fi
@@ -297,6 +297,16 @@ What you gain, and what you lose:
   run the move block ("Moving from the earlier kit") under "Install and register it (once)" (in bash, with `$PHENIX`
   set or from the folder that contains `modules`). It clones the new GuidedCoding into `modules/guided_coding` and replaces that old
   registration with the new one. Or type `/gc` with the earlier kit: it offers to do this for you.
+- **In a PHENIX binary installation** (one you downloaded rather than built with bootstrap), or wherever you cannot
+  write to `modules`: the move block cannot clone there, and stops without changing anything. Instead, type `bash`
+  (the line needs bash or zsh, not csh or tcsh), remove the earlier kit's registration with this line, which removes
+  only a `gc` or `guided_coding` link into `cctbx_project/libtbx/guided_coding` and prints the command to put it
+  back, then use the home-folder block. If the home-folder block then fails, run the printed command to put the
+  earlier kit back:
+
+  ```
+  S="${CLAUDE_CONFIG_DIR:-$HOME/.claude}/skills"; F=""; for N in gc guided_coding; do T="$(readlink "$S/$N")"; case "$T" in */cctbx_project/libtbx/guided_coding|*/cctbx_project/libtbx/guided_coding/) rm "$S/$N" && F=1 && echo "Removed $S/$N. To put it back: ln -s '$(printf %s "$T" | sed "s/'/'\\\\''/g")' '$(printf %s "$S/$N" | sed "s/'/'\\\\''/g")'";; esac; done; [ -n "$F" ] || echo "No registration of the earlier kit was found in $S; nothing removed."
+  ```
 - **Two links.** Keep only one link to GuidedCoding. Two skills both named `gc` conflict.
 - **Your instructions.** If your `CLAUDE.local.md` adopts the earlier kit's "Developer–Guide Contract", that line can
   go. Your project method file is not used by the new `/gc`; `/gc setup` writes short notes instead.
