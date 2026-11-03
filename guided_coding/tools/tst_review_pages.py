@@ -398,42 +398,103 @@ def page_link_cases():
     shutil.rmtree(folder)
   return failures
 
+def write_file(path, text):
+  os.makedirs(os.path.dirname(path), exist_ok = True)
+  open(path, "w").write(text)
+
+def runner_output(folder, overlays, roots, test_text, before = None):
+  """Write test_text as a test and an old-code runner for it in folder, and
+     run it; before, if given, is code run first in the same process.
+     Returns (exit code, output)"""
+  import subprocess
+  test = os.path.join(folder, "tst_runner.py")
+  write_file(test, test_text)
+  runner = os.path.join(folder, "runner.py")
+  write_file(runner, review_pages.RUNNER %dict(overlays = overlays,
+    test = test, args = [], roots = roots, started = review_pages.TEST_STARTED,
+    mixed = review_pages.MIXED, real_files = [os.path.realpath(x[2])
+    for x in overlays], module_names = [x[0] for x in overlays],
+    is_old = True))
+  command = [sys.executable, runner]
+  if before:
+    command = [sys.executable, "-c", "%s\nexec(compile(open(%r).read(), %r, "
+      "'exec'))" %(before, runner, runner)]
+  p = subprocess.run(command, cwd = folder, stdout = subprocess.PIPE,
+    stderr = subprocess.STDOUT, universal_newlines = True)
+  return p.returncode, p.stdout
+
 def mixed_runner_cases():
   """The old-code runner, with two changed modules where the first imports a
-     value from the second: it must stop rather than run the test on a
-     mixture of old and current code"""
+     value from the second: the test must run on both old versions, never on
+     a mixture of old and current code. A changed module imported before the
+     runner starts must stop the run"""
   failures = []
   folder = tempfile.mkdtemp()
   try:
-    def write(path, text):
-      os.makedirs(os.path.dirname(path), exist_ok = True)
-      open(path, "w").write(text)
     current = os.path.join(folder, "current")
     old = os.path.join(folder, "old")
     for root, value in ((current, "CURRENT"), (old, "OLD")):
-      write(os.path.join(root, "pkg", "__init__.py"), "")
-      write(os.path.join(root, "pkg", "a.py"),
+      write_file(os.path.join(root, "pkg", "__init__.py"), "")
+      write_file(os.path.join(root, "pkg", "a.py"),
         "from pkg.b import value\ndef result():\n  return value\n")
-      write(os.path.join(root, "pkg", "b.py"), "value = %r\n" %value)
-    test = os.path.join(folder, "tst_mixed.py")
-    write(test, "import pkg.a, pkg.b\nprint('a gives', pkg.a.result(), "
-      "'b gives', pkg.b.value)\n")
+      write_file(os.path.join(root, "pkg", "b.py"), "value = %r\n" %value)
     overlays = [(m, os.path.join(old, "pkg", f), os.path.join(current, "pkg",
       f)) for m, f in (("pkg.a", "a.py"), ("pkg.b", "b.py"))]
-    runner = os.path.join(folder, "runner.py")
-    write(runner, review_pages.RUNNER %dict(overlays = overlays, test = test,
-      args = [], roots = [current], started = review_pages.TEST_STARTED,
-      mixed = review_pages.MIXED, real_files = [os.path.realpath(x[2])
-      for x in overlays], module_names = [x[0] for x in overlays],
-      is_old = True))
-    import subprocess
-    p = subprocess.run([sys.executable, runner], cwd = folder,
-      stdout = subprocess.PIPE, stderr = subprocess.STDOUT,
-      universal_newlines = True)
-    if p.returncode == 0 or review_pages.MIXED not in p.stdout or \
-        review_pages.TEST_STARTED in p.stdout or "a gives" in p.stdout:
-      failures.append("mixed old and current code was not refused (exit %d):"
-        "\n%s" %(p.returncode, p.stdout))
+    test = ("import pkg.a, pkg.b\nprint('a gives', pkg.a.result(), "
+      "'b gives', pkg.b.value)\n")
+    code, output = runner_output(folder, overlays, [current], test)
+    if code != 0 or "a gives OLD b gives OLD" not in output:
+      failures.append("two changed modules, one importing the other, did not "
+        "both run as their old versions (exit %d):\n%s" %(code, output))
+    code, output = runner_output(folder, overlays, [current], test,
+      before = "import sys\nsys.path.insert(0, %r)\nimport pkg.b" %current)
+    if code == 0 or review_pages.MIXED not in output or \
+        review_pages.TEST_STARTED in output or "a gives" in output:
+      failures.append("a changed module imported before the runner started "
+        "was not refused (exit %d):\n%s" %(code, output))
+  finally:
+    shutil.rmtree(folder)
+  return failures
+
+def package_cycle_cases():
+  """The old-code runner, with a changed module that its own package's
+     __init__.py imports from (as phenix.model_building imports morph_info):
+     the old module must load after its package, as a normal import would"""
+  failures = []
+  folder = tempfile.mkdtemp()
+  try:
+    current = os.path.join(folder, "current")
+    old = os.path.join(folder, "old")
+    write_file(os.path.join(current, "pkg", "__init__.py"),
+      "from pkg.child import value\n")
+    write_file(os.path.join(current, "pkg", "sibling.py"), "x = 1\n")
+    for root, value in ((current, "CURRENT"), (old, "OLD")):
+      write_file(os.path.join(root, "pkg", "child.py"),
+        "from pkg.sibling import x\nvalue = %r\n" %value)
+    overlays = [("pkg.child", os.path.join(old, "pkg", "child.py"),
+      os.path.join(current, "pkg", "child.py"))]
+    code, output = runner_output(folder, overlays, [current],
+      "import pkg, pkg.child\nprint('package gives', pkg.value, "
+      "'child gives', pkg.child.value)\n")
+    if code != 0 or "package gives OLD child gives OLD" not in output:
+      failures.append("a changed module that its package's __init__.py "
+        "imports was not loaded as its old version (exit %d):\n%s"
+        %(code, output))
+    # A package that loads its current child itself, bypassing the finder:
+    #  the run must stop before the test, not report the old file
+    write_file(os.path.join(current, "pkg", "__init__.py"),
+      "import importlib.util, os, sys\n"
+      "s = importlib.util.spec_from_file_location('pkg.child', "
+      "os.path.join(os.path.dirname(__file__), 'child.py'))\n"
+      "m = importlib.util.module_from_spec(s)\n"
+      "sys.modules['pkg.child'] = m\ns.loader.exec_module(m)\n"
+      "value = m.value\n")
+    code, output = runner_output(folder, overlays, [current],
+      "import pkg\nprint('package gives', pkg.value)\n")
+    if code == 0 or review_pages.MIXED not in output or \
+        review_pages.TEST_STARTED in output or "OLD CODE" in output:
+      failures.append("a package that loaded its current child itself was "
+        "not refused (exit %d):\n%s" %(code, output))
   finally:
     shutil.rmtree(folder)
   return failures
@@ -595,6 +656,7 @@ def run():
     shutil.rmtree(folder)
   failures.extend(saved_copy_cases())
   failures.extend(mixed_runner_cases())
+  failures.extend(package_cycle_cases())
   failures.extend(markdown_cases())
   failures.extend(dependency_cases())
   failures.extend(hostile_page_cases())

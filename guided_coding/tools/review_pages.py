@@ -74,31 +74,44 @@ TEST_STARTED = "TEST STARTED"  # the runner's marker: replacements loaded
 MIXED = "MIXED CODE:"  # the runner's refusal: old and current code would mix
 
 RUNNER = '''
-import importlib.util, os, runpy, sys
+import importlib, importlib.abc, importlib.util, os, runpy, sys
 overlays = %(overlays)r   # (module name, old file, real file)
 for root in %(roots)r:     # so the old modules' packages can be imported
   if root not in sys.path:
     sys.path.append(root)
-for name, old_file, real_file in sorted(overlays, key = lambda x: x[0].count(".")):
-  # A changed module already imported (by an old module loaded before it)
-  #  is the current version, and what imported it keeps that version: the
-  #  run would mix old and current code, so it stops here
+old_files = dict((name, (old_file, real_file))
+  for name, old_file, real_file in overlays)
+# A changed module imported before the finder below is in place is the
+#  current version: the run would mix old and current code, so it stops here
+for name in sorted(old_files):
   if name in sys.modules:
     print("%(mixed)s %%s was imported from %%s before its old version could "
       "be loaded; this run would mix old and current code"
       %%(name, getattr(sys.modules[name], "__file__", None)), flush = True)
     sys.exit(3)
-  kw = {}
-  if os.path.basename(real_file) == "__init__.py":
-    kw["submodule_search_locations"] = [os.path.dirname(real_file)]
-  spec = importlib.util.spec_from_file_location(name, old_file, **kw)
-  module = importlib.util.module_from_spec(spec)
-  sys.modules[name] = module
-  parent, _, child = name.rpartition(".")
-  spec.loader.exec_module(module)
-  if parent:
-    setattr(importlib.import_module(parent), child, module)
-  print("OLD CODE: %%s from %%s" %%(name, old_file))
+
+class OldCodeFinder(importlib.abc.MetaPathFinder):
+  """Finds each changed module at its old file, whatever imports it, so that
+     its package is imported first and import cycles resolve as usual"""
+  def find_spec(self, name, path, target = None):
+    if name not in old_files:
+      return None
+    old_file, real_file = old_files[name]
+    kw = {}
+    if os.path.basename(real_file) == "__init__.py":
+      kw["submodule_search_locations"] = [os.path.dirname(real_file)]
+    return importlib.util.spec_from_file_location(name, old_file, **kw)
+
+sys.meta_path.insert(0, OldCodeFinder())
+for name in sorted(old_files, key = lambda x: x.count(".")):
+  loaded_file = getattr(importlib.import_module(name), "__file__", None)
+  # A package can load a current child itself, bypassing the finder
+  if not loaded_file or os.path.realpath(loaded_file) != \\
+      os.path.realpath(old_files[name][0]):
+    print("%(mixed)s %%s was loaded from %%s, not from its old version"
+      %%(name, loaded_file), flush = True)
+    sys.exit(3)
+  print("OLD CODE: %%s from %%s" %%(name, old_files[name][0]))
 sys.argv = [%(test)r] + %(args)r
 print(%(started)r, flush = True)
 try:
