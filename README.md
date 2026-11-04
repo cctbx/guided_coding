@@ -21,8 +21,8 @@ your page; nothing is compiled or installed. Start with [`guided_coding/SKILL.md
 - **Claude Code.** If you do not have it yet, follow
   [Anthropic's Claude Code quickstart](https://code.claude.com/docs/en/quickstart) first.
 - **Git,** unless you install from the ZIP download.
-- **macOS, Linux or Windows.** GuidedCoding has been tested on macOS and Linux. On Windows, use the Windows block
-  below; it is newer and has had less testing.
+- **macOS, Linux or Windows.** GuidedCoding has been tested on macOS, Linux and Windows. On Windows, use the
+  Windows block below.
 - **For the review packet and your page:** a Python 3 with the `markdown` package (Python-Markdown). PHENIX's
   `libtbx.python` has it. For another Python, add it for your user only with `python3 -m pip install --user markdown`
   (on Windows, `python -m pip install --user markdown`; GuidedCoding installs nothing itself). The page also needs
