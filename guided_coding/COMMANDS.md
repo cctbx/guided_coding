@@ -58,7 +58,9 @@ Then ask for the task.
    - Otherwise say that the installation differs from the published release, and list the changed and missing
      files; do not assume the published release is newer. A changed file may be the developer's own work: say to
      keep a copy of anything they want before replacing the installation. Then give the README's ZIP update steps
-     as commands; on Windows, the README's Windows update steps instead.
+     as commands; on Windows, the README's Windows update steps instead. Where a step uses one of the README's
+     blocks (on Windows, the uninstall and install blocks), give that block exactly as written, never a
+     command of your own: the blocks check what they remove and install.
 6. Afterwards, say to start a new Claude Code conversation: this one still uses the old instructions.
 
 ## 4. undo
