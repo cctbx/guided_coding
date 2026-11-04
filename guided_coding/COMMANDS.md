@@ -47,10 +47,18 @@ Then ask for the task.
 3. Run `git -C <copy> fetch`. Say how many commits the copy is behind `origin/master`, and the latest version line
    (`git -C <copy> show origin/master:guided_coding/SKILL.md`). If it is up to date, say so and stop.
 4. Ask once. If the developer agrees, run `git -C <copy> pull --ff-only`, and show the new version line.
-5. **A ZIP copy:** there is no Git history. First check whether the published ZIP is newer: download it to a
-   temporary folder, check it against its published `.sha256`, and compare its `RELEASE.sha256` with the copy's
-   (if the copy has none, compare the files themselves). If they are the same, say the copy is up to date and stop.
-   Otherwise give the README's ZIP update steps as commands; on Windows, the README's Windows update steps instead.
+5. **A ZIP copy:** there is no Git history. Check the installed files against the published release:
+   - Download the published ZIP and its `.sha256` to a new temporary folder, check the ZIP against it, and unpack
+     it there. If the download or the check fails, say what failed and stop; change nothing.
+   - Check each file listed in the download's `RELEASE.sha256` (a SHA-256 and a path from the copy's top folder)
+     by computing the SHA-256 of that file in the copy. Comparing the two `RELEASE.sha256` files is not enough: it
+     says nothing about the files themselves. Use the download's list even if the copy has none. On Windows, use
+     PowerShell's `Get-FileHash`; no Python is needed.
+   - If every listed file is in the copy and unchanged, say the copy is up to date and stop.
+   - Otherwise say that the installation differs from the published release, and list the changed and missing
+     files; do not assume the published release is newer. A changed file may be the developer's own work: say to
+     keep a copy of anything they want before replacing the installation. Then give the README's ZIP update steps
+     as commands; on Windows, the README's Windows update steps instead.
 6. Afterwards, say to start a new Claude Code conversation: this one still uses the old instructions.
 
 ## 4. undo
