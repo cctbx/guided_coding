@@ -283,10 +283,11 @@ Each block ends by showing the link and the version line of the skill it registe
 
 **Then** start a new Claude Code conversation in the folder of a software project, and type `/gc` followed by a small
 task (or `/gc help` for an introduction and the list of commands: `setup`, `batch`, `history`, `undo`, `update`,
-`uninstall`). If you plan to use GuidedCoding regularly on that project, run
-`/gc setup` there once (recommended): it saves the project's build and test commands, commit rules and other local
-defaults in `.claude/GC_NOTES.md`. Without it, `/gc` finds these from the project each time. Installing is once per
-computer.
+`uninstall`). Type `/gc` at the very start of the message, with nothing before it, not even a space; otherwise
+Claude Code takes it as ordinary text: GuidedCoding does not run, and Claude may then make the change without it.
+If you plan to use GuidedCoding regularly on that project, run `/gc setup` there once (recommended): it saves the
+project's build and test commands, commit rules and other local defaults in `.claude/GC_NOTES.md`. Without it, `/gc`
+finds these from the project each time. Installing is once per computer.
 
 ### Update
 
