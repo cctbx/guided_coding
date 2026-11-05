@@ -166,6 +166,12 @@ should print `guided_coding.zip: OK`:
 (cd ~/Downloads && curl -fsS https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256 | shasum -a 256 -c)
 ```
 
+This check detects a damaged or mismatched download, but it does not prove who published the ZIP: someone able to
+replace the ZIP could replace its checksum too. The Windows block below runs the same check itself. The
+[source is on GitHub](https://github.com/cctbx/guided_coding), and `RELEASE.sha256` inside the ZIP lists the
+checksums of the shipped files. Report security concerns privately, using the contact address on
+[Tom Terwilliger's home page](https://www.thomasterwilliger.org/).
+
 Then run this.
 It unpacks the ZIP into `~/guided_coding` (or the folder in `GC_DIR`) and registers it:
 
@@ -195,7 +201,8 @@ waiting after the last line, press Enter once more. The block downloads
 published [`guided_coding.zip.sha256`](https://www.thomasterwilliger.org/guided_coding/guided_coding.zip.sha256),
 unpacks it into `guided_coding` in your home folder (or the folder in `GC_DIR`; the block prints the folder it
 uses), and registers it with a directory junction, a kind of link that needs no special Windows setting and no
-administrator rights. Git is not needed. If you set `CLAUDE_CONFIG_DIR`, the block uses that folder instead of
+administrator rights. The checksum detects a damaged or mismatched download; it does not authenticate the
+publisher. Git is not needed. If you set `CLAUDE_CONFIG_DIR`, the block uses that folder instead of
 `.claude` in your home folder. Like the blocks above, it checks before it changes anything and stops on anything
 unexpected; if the registration fails, it removes the files it had just unpacked, so you can run it again. To put
 GuidedCoding somewhere else, first run this line in the same PowerShell window, with your folder in place of

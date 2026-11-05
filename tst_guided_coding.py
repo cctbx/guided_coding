@@ -82,6 +82,9 @@ def run():
   windows = re.findall(r'^\$Version = "(\S+)"$', readme, re.M)
   if windows != [VERSION]:
     failures.append("README.md: the Windows install block gives $Version = %s, expected %s once" % (windows, VERSION))
+  # The checksum's limit is stated next to the ZIP check (publishing safety plan, 2026-11-05).
+  if readme.count("does not prove who published the ZIP") != 1:
+    failures.append("README.md: the note on what the checksum check does not prove is missing")
   # Version 1.4: six triggers, H among them, and H asks for the outside review (§3).
   skill = texts["SKILL.md"]
   if "The six triggers" not in skill:
